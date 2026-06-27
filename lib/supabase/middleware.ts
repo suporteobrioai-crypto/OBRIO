@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 const protectedPrefixes = [
   "/dashboard",
@@ -23,14 +24,17 @@ const protectedPrefixes = [
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let supabaseUrl: string;
+  let supabaseAnonKey: string;
 
-  if (!url || !anonKey) {
+  try {
+    supabaseUrl = getSupabaseUrl();
+    supabaseAnonKey = getSupabaseAnonKey();
+  } catch {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(url, anonKey, {
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -56,7 +60,9 @@ export async function updateSession(request: NextRequest) {
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
   const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/cadastro");
+    pathname === "/" ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/cadastro");
 
   if (!user && isProtected) {
     const redirectUrl = request.nextUrl.clone();

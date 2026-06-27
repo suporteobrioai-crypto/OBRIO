@@ -11,11 +11,12 @@ major_version = 15
 
 [auth]
 enabled = true
-site_url = "https://obrio-ai.obrioai.workers.dev"
+site_url = "https://obrioai.app"
 additional_redirect_urls = [
   "http://localhost:3000/**",
-  "https://obrio-ai.obrioai.workers.dev/**",
-  "https://*.workers.dev/**"
+  "https://obrioai.app/**",
+  "https://www.obrioai.app/**",
+  "https://obrio-ai.obrioai.workers.dev/**"
 ]
 
 [auth.email]
@@ -25,6 +26,3 @@ enable_confirmations = true
 
 [storage]
 enabled = true
-
-[vector]
-enabled = false
