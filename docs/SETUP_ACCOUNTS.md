@@ -60,6 +60,18 @@ npx wrangler login
 npm run deploy
 ```
 
+### DNS parking — remover antes do custom domain
+
+Se o deploy falhar com *"Hostname already has externally managed DNS records"*:
+
+1. [DNS Records — obrioai.app](https://dash.cloudflare.com/3993b788758518b8ed046b055577f49d/obrioai.app/dns/records)
+2. Apague registros **A**, **AAAA** ou **CNAME** em `obrioai.app` e `www.obrioai.app` (geralmente apontam para parking)
+3. Rode `npm run deploy` ou `npx wrangler triggers deploy`
+
+O `CLOUDFLARE_API_TOKEN` precisa de **Workers Scripts Edit** + **Zone DNS Edit** para o CI criar os registros automaticamente.
+
+Alternativa: Workers → **obrio-ai** → Settings → Domains & Routes → **Add Custom Domain** → `obrioai.app` (após limpar DNS).
+
 ### Redirect www → apex (opcional)
 
 Cloudflare Dashboard → **obrioai.app** → **Rules** → **Redirect Rules**:
