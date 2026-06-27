@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f7f8f6;
+  --foreground: #1e2523;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@keyframes report-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.report-chart-bar {
+  animation: report-bar-grow 520ms ease-out both;
+  transform-origin: bottom;
+}
+
+.obrio-materials-dock {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  z-index: 40;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+}
+
+.obrio-materials-dock-raised {
+  bottom: 68px;
+  max-height: calc(100vh - 76px);
+}
+
+.obrio-payment-dock {
+  bottom: 36px;
+  max-height: calc(100vh - 44px);
+}
+
+@media (min-width: 1024px) {
+  .obrio-materials-dock {
+    left: max(302px, calc((100vw - 1440px) / 2 + 302px));
+    right: max(8px, calc((100vw - 1440px) / 2 + 8px));
+  }
+}
+
+.hero-bg {
+  background-image:
+    linear-gradient(90deg, rgba(14, 51, 42, 0.92) 0%, rgba(14, 51, 42, 0.78) 42%, rgba(14, 51, 42, 0.12) 100%),
+    url("/obrio-hero.png");
+  background-position: center;
+  background-size: cover;
+}
+
+@media (max-width: 768px) {
+  .hero-bg {
+    background-image:
+      linear-gradient(180deg, rgba(14, 51, 42, 0.96) 0%, rgba(14, 51, 42, 0.82) 52%, rgba(14, 51, 42, 0.18) 100%),
+      url("/obrio-hero.png");
+    background-position: 58% center;
+  }
+}
