@@ -11,6 +11,8 @@ MVP de gestão de obras e reformas — Next.js 14, Supabase e Cloudflare Workers
 
 ## Setup local
 
+Guia completo de contas: [docs/SETUP_ACCOUNTS.md](docs/SETUP_ACCOUNTS.md)
+
 1. Copie `.env.example` para `.env.local` e preencha as chaves do Supabase.
 2. Aplique a migration em `supabase/migrations/001_obrio_core.sql` (SQL Editor ou `supabase db push`).
 3. Instale dependências e rode o dev server:
