@@ -11,10 +11,20 @@ major_version = 15
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/**", "https://*.workers.dev/**"]
+site_url = "https://obrio-ai.obrioai.workers.dev"
+additional_redirect_urls = [
+  "http://localhost:3000/**",
+  "https://obrio-ai.obrioai.workers.dev/**",
+  "https://*.workers.dev/**"
+]
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+
+[storage]
+enabled = true
+
+[vector]
+enabled = false

@@ -17,5 +17,9 @@
   ],
   "images": {
     "binding": "IMAGES"
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://kvofxprsmzyxssjpyfmy.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2b2Z4cHJzbXp5eHNzanB5Zm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDI1MjUsImV4cCI6MjA5ODA3ODUyNX0.6L3opD2aUvmwZ8j5rbZdVA283H_-3upG8W2pNi1rQog"
   }
 }
