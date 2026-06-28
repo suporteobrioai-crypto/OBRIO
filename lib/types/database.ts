@@ -40,6 +40,7 @@ export type SubscriptionRow = {
   user_id: string;
   plan: SubscriptionPlan;
   status: string;
+  /** Coluna DB legada; reservada para ID Hotmart na fase billing */
   stripe_customer_id: string | null;
   current_period_end: string | null;
   created_at: string;

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getProfileOnboardingPath } from "@/lib/auth/profile-onboarding";
 
 export const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -13,13 +14,15 @@ export const PROTECTED_PREFIXES = [
   "/relatorios",
   "/assistente",
   "/equipe",
+  "/responsaveis",
   "/trocar-obra",
+  "/responsaveis",
   "/perfil",
   "/configuracoes",
   "/assinatura"
 ] as const;
 
-export type PostLoginPath = "/obras/nova" | "/dashboard";
+export type { PostLoginPath } from "@/lib/auth/profile-onboarding";
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
@@ -30,13 +33,8 @@ export function isProtectedPath(pathname: string): boolean {
 export async function getPostLoginPath(
   supabase: SupabaseClient,
   userId: string
-): Promise<PostLoginPath> {
-  const { count } = await supabase
-    .from("obras")
-    .select("*", { count: "exact", head: true })
-    .eq("owner_id", userId);
-
-  return (count ?? 0) > 0 ? "/dashboard" : "/obras/nova";
+) {
+  return getProfileOnboardingPath(supabase, userId);
 }
 
 export async function resolvePostLoginRedirect(
@@ -44,9 +42,14 @@ export async function resolvePostLoginRedirect(
   userId: string,
   requestedRedirect: string | null
 ): Promise<string> {
+  const defaultPath = await getPostLoginPath(supabase, userId);
+
   if (requestedRedirect && isProtectedPath(requestedRedirect)) {
+    if (defaultPath === "/onboarding") {
+      return "/onboarding";
+    }
     return requestedRedirect;
   }
 
-  return getPostLoginPath(supabase, userId);
+  return defaultPath;
 }

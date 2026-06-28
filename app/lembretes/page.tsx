@@ -14,8 +14,9 @@ import {
   Trash2
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { CreateRecordPanel } from "@/components/CreateRecordPanel";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
-import { Card, Metric } from "@/components/Ui";
+import { Card, Metric, PrimaryButton } from "@/components/Ui";
 import { useLembretes } from "@/hooks/useLembretes";
 import { useObraAtiva } from "@/hooks/useObraAtiva";
 import { useObras } from "@/hooks/useObras";
@@ -49,12 +50,14 @@ export default function LembretesPage() {
     completeReminder,
     postponeReminder,
     updateTitle,
-    deleteReminder
+    deleteReminder,
+    createReminder
   } = useLembretes(activeProject?.id ?? null);
 
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("Todos");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const filteredReminders = useMemo(
     () =>
@@ -98,7 +101,17 @@ export default function LembretesPage() {
   }
 
   return (
-    <AppShell title="Lembretes" subtitle="O Obrio AI lembra você no aplicativo e no WhatsApp.">
+    <AppShell
+      title="Lembretes"
+      subtitle="Organize compromissos da obra e receba avisos no app."
+      action={
+        activeProject ? (
+          <PrimaryButton type="button" onClick={() => setShowCreateForm((v) => !v)}>
+            + Lembrete
+          </PrimaryButton>
+        ) : undefined
+      }
+    >
       {error ? (
         <p className="mb-4 rounded-[8px] bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
           {error}
@@ -107,6 +120,58 @@ export default function LembretesPage() {
       {loading ? (
         <p className="mb-4 text-sm font-semibold text-graphite/60">Carregando lembretes...</p>
       ) : null}
+
+      {showCreateForm && activeProject ? (
+        <section className="mb-4">
+          <CreateRecordPanel
+            title="Novo lembrete"
+            description="O lembrete ficará vinculado à obra ativa."
+            submitLabel="Criar lembrete"
+            onCancel={() => setShowCreateForm(false)}
+            fields={[
+              { name: "title", label: "Título", required: true, placeholder: "Ex: Entregar NF ao contador" },
+              {
+                name: "due_at",
+                label: "Data e hora",
+                type: "datetime-local",
+                required: true
+              },
+              {
+                name: "priority",
+                label: "Prioridade",
+                type: "select",
+                defaultValue: "Media",
+                options: [
+                  { value: "Alta", label: "Alta" },
+                  { value: "Media", label: "Média" },
+                  { value: "Baixa", label: "Baixa" }
+                ]
+              }
+            ]}
+            onSubmit={async (values) => {
+              const dueAt = new Date(values.due_at).toISOString();
+              await createReminder({
+                title: values.title.trim(),
+                due_at: dueAt,
+                priority: values.priority as "Alta" | "Media" | "Baixa"
+              });
+              setShowCreateForm(false);
+            }}
+          />
+        </section>
+      ) : null}
+
+      {!loading && !reminders.length && activeProject && !showCreateForm ? (
+        <Card className="mb-4">
+          <p className="text-sm font-semibold text-graphite/65">
+            Nenhum lembrete ainda. Crie o primeiro para não perder prazos.
+          </p>
+          <PrimaryButton type="button" className="mt-3" onClick={() => setShowCreateForm(true)}>
+            + Criar lembrete
+          </PrimaryButton>
+        </Card>
+      ) : null}
+
       <section>
         <div className="mb-3 flex items-center gap-2">
           <Bell size={20} className="text-build" />

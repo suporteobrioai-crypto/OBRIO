@@ -13,11 +13,12 @@ import {
   WalletCards
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { Card, Metric } from "@/components/Ui";
+import { CreateRecordPanel } from "@/components/CreateRecordPanel";
+import { Card, Metric, PrimaryButton } from "@/components/Ui";
 import { useObraAtiva } from "@/hooks/useObraAtiva";
 import { useObras } from "@/hooks/useObras";
 import { usePagamentos } from "@/hooks/usePagamentos";
-import { formatCents } from "@/lib/format";
+import { formatCents, parseBudgetToCents } from "@/lib/format";
 
 const periods = ["Hoje", "7 dias", "30 dias", "Personalizado"] as const;
 const sortOptions = ["Mais recentes", "Maior valor", "Menor valor", "Nome", "Função"];
@@ -32,9 +33,9 @@ export default function MaoDeObraPage() {
   const [roleFilter, setRoleFilter] = useState("Todos");
   const { shellProjects } = useObras();
   const { activeProject } = useObraAtiva(shellProjects);
-  const { pagamentos, prestadores, loading, error } = usePagamentos(
-    activeProject?.id ?? null
-  );
+  const { pagamentos, prestadores, loading, error, createPagamento, createPrestador } =
+    usePagamentos(activeProject?.id ?? null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const roleOptions = useMemo(() => {
     const roles = new Set(prestadores.map((item) => item.role).filter(Boolean));
@@ -183,8 +184,15 @@ export default function MaoDeObraPage() {
 
   return (
     <AppShell
-      title="Pagamentos da Equipe (Prestadores de Serviços)"
-      subtitle="Consulte pagamentos, profissionais, recibos e histórico da equipe organizados pelo Obrio AI."
+      title="Pagamentos da Equipe"
+      subtitle="Registre pagamentos e acompanhe prestadores da obra."
+      action={
+        activeProject ? (
+          <PrimaryButton type="button" onClick={() => setShowCreateForm((v) => !v)}>
+            + Pagamento
+          </PrimaryButton>
+        ) : undefined
+      }
     >
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
@@ -220,6 +228,77 @@ export default function MaoDeObraPage() {
           <p className="font-semibold text-graphite/70">
             Selecione uma obra para ver pagamentos da equipe.
           </p>
+        </Card>
+      ) : null}
+
+      {showCreateForm && activeProject ? (
+        <section className="mt-4">
+          <CreateRecordPanel
+            title="Novo pagamento"
+            description="Informe o profissional e o valor pago."
+            submitLabel="Salvar pagamento"
+            onCancel={() => setShowCreateForm(false)}
+            fields={[
+              { name: "prestador_name", label: "Profissional", required: true, placeholder: "Ex: João Silva" },
+              { name: "role", label: "Função", placeholder: "Ex: Pedreiro" },
+              {
+                name: "amount",
+                label: "Valor (R$)",
+                required: true,
+                placeholder: "Ex: 800"
+              },
+              {
+                name: "payment_date",
+                label: "Data do pagamento",
+                type: "date",
+                defaultValue: new Date().toISOString().slice(0, 10)
+              },
+              {
+                name: "status",
+                label: "Status",
+                type: "select",
+                defaultValue: "pago",
+                options: [
+                  { value: "pago", label: "Pago" },
+                  { value: "pendente", label: "Pendente" }
+                ]
+              }
+            ]}
+            onSubmit={async (values) => {
+              const amount_cents = parseBudgetToCents(values.amount);
+              if (amount_cents <= 0) throw new Error("Informe um valor válido.");
+              const existing = prestadores.find(
+                (item) =>
+                  item.name.toLocaleLowerCase("pt-BR") ===
+                  values.prestador_name.trim().toLocaleLowerCase("pt-BR")
+              );
+              let prestadorId = existing?.id;
+              if (!prestadorId) {
+                prestadorId = await createPrestador({
+                  name: values.prestador_name.trim(),
+                  role: values.role.trim() || undefined
+                });
+              }
+              await createPagamento({
+                prestador_id: prestadorId,
+                amount_cents,
+                payment_date: values.payment_date || undefined,
+                status: values.status as "pago" | "pendente"
+              });
+              setShowCreateForm(false);
+            }}
+          />
+        </section>
+      ) : null}
+
+      {!loading && activeProject && !pagamentos.length && !showCreateForm ? (
+        <Card className="mt-4">
+          <p className="text-sm font-semibold text-graphite/65">
+            Nenhum pagamento registrado. Lance o primeiro para controlar a equipe.
+          </p>
+          <PrimaryButton type="button" className="mt-3" onClick={() => setShowCreateForm(true)}>
+            + Registrar pagamento
+          </PrimaryButton>
         </Card>
       ) : null}
 

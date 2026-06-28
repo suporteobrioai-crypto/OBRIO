@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Edit3,
-  FileBarChart,
   FileText,
   Home,
   House,
@@ -36,24 +35,18 @@ import { useObraAtiva } from "@/hooks/useObraAtiva";
 import { useObras } from "@/hooks/useObras";
 import { useProfile } from "@/hooks/useProfile";
 import { useSubscription } from "@/hooks/useSubscription";
+import { getWhatsAppContactUrl, isAiDockEnabled, isWhatsAppFabEnabled } from "@/lib/feature-flags";
 import { getInitials, type ShellProject } from "@/lib/obras";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: Home },
-  { label: "Obras", href: "/obras", icon: Building2 },
-  { label: "Diário da Obra", href: "/diario", icon: FileText },
-  { label: "Compras, Notas Fiscais e Garantias", href: "/materiais", icon: ReceiptText },
-  { label: "Pagamentos da Equipe (Prestadores de Serviços)", href: "/mao-de-obra", icon: Users },
-  { label: "Responsáveis pelas Obras", href: "/trocar-obra", icon: UserRoundCheck },
-  { label: "Lembretes", href: "/lembretes", icon: Bell },
-  { label: "Relatórios", href: "/relatorios", icon: FileBarChart }
+  { label: "Início", mobileLabel: "Início", href: "/dashboard", icon: Home },
+  { label: "Obras", mobileLabel: "Obras", href: "/obras", icon: Building2 },
+  { label: "Diário da Obra", mobileLabel: "Diário", href: "/diario", icon: FileText },
+  { label: "Compras e NF", mobileLabel: "Compras", href: "/materiais", icon: ReceiptText },
+  { label: "Pagamentos", mobileLabel: "Pagamentos", href: "/mao-de-obra", icon: Users },
+  { label: "Responsáveis", mobileLabel: "Pessoas", href: "/responsaveis", icon: UserRoundCheck },
+  { label: "Lembretes", mobileLabel: "Lembretes", href: "/lembretes", icon: Bell }
 ];
-
-const assistantNavItem = {
-  label: "Assistente Obrio AI",
-  href: "/assistente",
-  icon: ObrioMark
-};
 
 const materialPlaceholders = [
   "Ex: Comprei 30 sacos de cimento por R$ 1.200.",
@@ -135,7 +128,7 @@ export function AppShell({
   const [diaryConfirmationOpen, setDiaryConfirmationOpen] = useState(false);
   const [materialPlaceholderIndex, setMaterialPlaceholderIndex] = useState(0);
   const [teamPaymentPlaceholderIndex, setTeamPaymentPlaceholderIndex] = useState(0);
-  const [assistantPlaceholderIndex, setAssistantPlaceholderIndex] = useState(0);
+  const [assistantPlaceholderIndex] = useState(0);
   const [assistantMessage, setAssistantMessage] = useState("");
   const [assistantNotice, setAssistantNotice] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -158,25 +151,18 @@ export function AppShell({
   const displayName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "Usuário";
   const userInitials = getInitials(displayName, user?.email);
   const planLabel = limits.label;
-  const showObrioInput = [
-    "/dashboard",
-    "/diario",
-    "/materiais",
-    "/mao-de-obra",
-    "/lembretes",
-    "/relatorios",
-    "/assistente"
-  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
-  const showWhatsAppButton = [
-    "/dashboard",
-    "/obras",
-    "/diario",
-    "/materiais",
-    "/mao-de-obra",
-    "/lembretes",
-    "/relatorios",
-    "/assistente"
-  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const showObrioInput =
+    isAiDockEnabled() &&
+    ["/dashboard", "/diario", "/materiais", "/mao-de-obra", "/lembretes"].some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`)
+    );
+  const whatsAppUrl = getWhatsAppContactUrl();
+  const showWhatsAppButton =
+    isWhatsAppFabEnabled() &&
+    Boolean(whatsAppUrl) &&
+    ["/dashboard", "/obras", "/diario", "/materiais", "/mao-de-obra", "/lembretes"].some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`)
+    );
   useEffect(() => {
     if (pathname !== "/materiais") return;
 
@@ -201,29 +187,36 @@ export function AppShell({
     return () => window.clearInterval(interval);
   }, [pathname]);
 
-  useEffect(() => {
-    if (pathname !== "/assistente") return;
-
-    const interval = window.setInterval(() => {
-      setAssistantPlaceholderIndex(
-        (current) => (current + 1) % assistantPlaceholders.length
-      );
-    }, 4000);
-
-    return () => window.clearInterval(interval);
-  }, [pathname]);
-
   function selectProject(project: ShellProject) {
     setActive(project);
     setProjectMenuOpen(false);
     setProjectActionsOpen(null);
   }
 
-  function sendAssistantMessage(message = assistantMessage) {
+  async function sendAssistantMessage(message = assistantMessage) {
     const normalizedMessage = message.trim();
     if (!normalizedMessage) return;
-    setAssistantNotice(`Pergunta enviada: ${normalizedMessage}`);
+    setAssistantNotice("Consultando assistente…");
     setAssistantMessage("");
+    try {
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: normalizedMessage,
+          obraId: activeProject?.id ?? null
+        })
+      });
+      const data = (await response.json()) as { reply?: string };
+      setAssistantNotice(
+        data.reply ??
+          "Assistente em breve. Use os botões + Registrar em cada módulo para salvar agora."
+      );
+    } catch {
+      setAssistantNotice(
+        "Assistente indisponível. Use os botões + Registrar em cada módulo."
+      );
+    }
   }
 
   function handleNewProject() {
@@ -434,13 +427,6 @@ export function AppShell({
                   Minha Assinatura
                 </Link>
                 <Link
-                  href="/trocar-obra"
-                  className="flex h-10 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-foundation hover:bg-concrete"
-                >
-                  <Users size={16} className="text-build" />
-                  Responsáveis pelas Obras
-                </Link>
-                <Link
                   href="/configuracoes"
                   className="flex h-10 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-foundation hover:bg-concrete"
                 >
@@ -479,24 +465,6 @@ export function AppShell({
                 </Link>
               );
             })}
-            {(() => {
-              const active =
-                pathname === assistantNavItem.href ||
-                pathname.startsWith(`${assistantNavItem.href}/`);
-              return (
-                <Link
-                  href={assistantNavItem.href}
-                  className={`flex min-h-11 items-center gap-3 rounded-[8px] px-3 py-2 text-sm font-bold transition ${
-                    active
-                      ? "bg-foundation text-white"
-                      : "text-foundation hover:bg-concrete"
-                  }`}
-                >
-                  <assistantNavItem.icon size={18} className="shrink-0 text-build" />
-                  <span className="leading-5">{assistantNavItem.label}</span>
-                </Link>
-              );
-            })()}
           </nav>
         </aside>
 
@@ -556,10 +524,6 @@ export function AppShell({
                             <ReceiptText size={16} className="text-build" />
                             Minha Assinatura
                           </Link>
-                          <Link href="/trocar-obra" className="flex h-10 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-foundation hover:bg-concrete">
-                            <Users size={16} className="text-build" />
-                            Responsáveis pelas Obras
-                          </Link>
                           <Link href="/configuracoes" className="flex h-10 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-foundation hover:bg-concrete">
                             <Settings size={16} className="text-build" />
                             Configurações
@@ -603,42 +567,20 @@ export function AppShell({
                     }`}
                   >
                     <item.icon size={16} className="text-build" />
-                    {item.label}
+                    {item.mobileLabel}
                   </Link>
                 );
               })}
-              {(() => {
-                const active =
-                  pathname === assistantNavItem.href ||
-                  pathname.startsWith(`${assistantNavItem.href}/`);
-                return (
-                  <Link
-                    href={assistantNavItem.href}
-                    className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-[8px] px-3 text-xs font-black ${
-                      active
-                        ? "bg-foundation text-white"
-                        : "bg-concrete text-foundation"
-                    }`}
-                  >
-                    <assistantNavItem.icon size={16} className="text-build" />
-                    {assistantNavItem.label}
-                  </Link>
-                );
-              })()}
             </nav>
           </header>
 
           <div
             className={`min-w-0 max-w-full px-4 py-5 md:px-6 lg:px-8 ${
-              pathname === "/mao-de-obra" ||
-              pathname === "/lembretes" ||
-              pathname === "/relatorios" ||
-              pathname === "/assistente"
+              pathname === "/mao-de-obra" || pathname === "/lembretes"
                 ? "pb-64 sm:pb-56"
-                : pathname === "/diario" ||
-                  pathname === "/materiais"
-                ? "pb-44"
-                : ""
+                : pathname === "/diario" || pathname === "/materiais"
+                  ? "pb-44"
+                  : ""
             }`}
           >
             {children}
@@ -914,21 +856,20 @@ export function AppShell({
           </div>
         </section>
       </div>
-      {showWhatsAppButton ? (
+      {showWhatsAppButton && whatsAppUrl ? (
         <a
-          href="/configuracoes"
-          className={`fixed right-4 z-50 inline-flex max-w-[calc(100vw-32px)] items-center gap-2 rounded-full bg-[#22C55E] px-3 py-1.5 text-xs font-normal text-white shadow-[0_14px_32px_rgba(34,197,94,0.24)] transition hover:-translate-y-0.5 hover:bg-[#16A34A] sm:right-5 sm:px-3.5 sm:py-1.5 ${
-            pathname === "/diario"
-                ? "bottom-[190px] lg:bottom-4"
-                : "bottom-4"
+          href={whatsAppUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`fixed right-4 z-50 inline-flex max-w-[calc(100vw-32px)] items-center gap-2 rounded-full bg-moss px-3 py-1.5 text-xs font-normal text-white shadow-soft transition hover:-translate-y-0.5 sm:right-5 sm:px-3.5 sm:py-1.5 ${
+            showObrioInput ? "bottom-[190px] lg:bottom-4" : "bottom-4"
           }`}
         >
           <span className="grid h-7 w-7 shrink-0 place-items-center">
             <WhatsAppIcon size={24} />
           </span>
           <span className="min-w-0 pr-0.5 text-left leading-[14px]">
-            <span className="block whitespace-nowrap">Fale com Obrio AI</span>
-            <span className="block whitespace-nowrap">no seu WhatsApp</span>
+            <span className="block whitespace-nowrap">Contato WhatsApp</span>
           </span>
         </a>
       ) : null}
@@ -1111,7 +1052,7 @@ export function AppShell({
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link
-                        href="/trocar-obra"
+                        href="/responsaveis"
                         className="inline-flex h-10 items-center rounded-[8px] bg-white px-3 text-sm font-black text-foundation"
                       >
                         Gerenciar responsáveis

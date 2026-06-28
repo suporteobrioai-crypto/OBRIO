@@ -8,7 +8,7 @@ create table if not exists public.subscriptions (
   plan text not null default 'gratuito'
     check (plan in ('gratuito', 'mensal', 'premium')),
   status text not null default 'active',
-  stripe_customer_id text,
+  stripe_customer_id text, -- legado: reservado para hotmart_subscriber_id na fase billing
   current_period_end timestamptz,
   created_at timestamptz default now()
 );

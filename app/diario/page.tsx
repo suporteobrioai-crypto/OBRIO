@@ -10,7 +10,8 @@ import {
   Paperclip
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { Card, SelectField } from "@/components/Ui";
+import { CreateRecordPanel } from "@/components/CreateRecordPanel";
+import { Card, PrimaryButton, SelectField } from "@/components/Ui";
 import { useDiario } from "@/hooks/useDiario";
 import { useObraAtiva } from "@/hooks/useObraAtiva";
 import { useObras } from "@/hooks/useObras";
@@ -30,7 +31,8 @@ export default function DiarioPage() {
   const [search, setSearch] = useState("");
   const { shellProjects } = useObras();
   const { activeProject } = useObraAtiva(shellProjects);
-  const { entries, loading, error } = useDiario(activeProject?.id ?? null);
+  const { entries, loading, error, createEntry } = useDiario(activeProject?.id ?? null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const filteredEntries = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("pt-BR");
@@ -46,7 +48,14 @@ export default function DiarioPage() {
   return (
     <AppShell
       title="Diário da Obra"
-      subtitle="Consulte e revise tudo que aconteceu na obra."
+      subtitle="Registre e consulte tudo que aconteceu na obra."
+      action={
+        activeProject ? (
+          <PrimaryButton type="button" onClick={() => setShowCreateForm((v) => !v)}>
+            + Registro
+          </PrimaryButton>
+        ) : undefined
+      }
     >
       {!activeProject ? (
         <Card>
@@ -60,6 +69,39 @@ export default function DiarioPage() {
         <div className="mb-4 rounded-[8px] bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
           {error}
         </div>
+      ) : null}
+
+      {showCreateForm && activeProject ? (
+        <section className="mb-4">
+          <CreateRecordPanel
+            title="Nova entrada no diário"
+            description="Descreva o que aconteceu hoje no canteiro."
+            submitLabel="Salvar registro"
+            onCancel={() => setShowCreateForm(false)}
+            fields={[
+              {
+                name: "content",
+                label: "Registro",
+                type: "textarea",
+                required: true,
+                placeholder: "Ex: Concretagem do bloco B concluída."
+              },
+              {
+                name: "entry_date",
+                label: "Data",
+                type: "date",
+                defaultValue: new Date().toISOString().slice(0, 10)
+              }
+            ]}
+            onSubmit={async (values) => {
+              await createEntry({
+                content: values.content.trim(),
+                entry_date: values.entry_date || undefined
+              });
+              setShowCreateForm(false);
+            }}
+          />
+        </section>
       ) : null}
 
       <section>
@@ -99,6 +141,11 @@ export default function DiarioPage() {
                 <p className="text-sm font-semibold text-graphite/60">
                   Nenhum registro no diário ainda.
                 </p>
+                {activeProject ? (
+                  <PrimaryButton type="button" className="mt-3" onClick={() => setShowCreateForm(true)}>
+                    + Registrar agora
+                  </PrimaryButton>
+                ) : null}
               </Card>
             ) : null}
             {filteredEntries.map((entry) => (

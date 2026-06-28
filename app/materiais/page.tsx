@@ -10,11 +10,12 @@ import {
   WalletCards
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { Card, Metric } from "@/components/Ui";
+import { CreateRecordPanel } from "@/components/CreateRecordPanel";
+import { Card, Metric, PrimaryButton } from "@/components/Ui";
 import { useMateriais } from "@/hooks/useMateriais";
 import { useObraAtiva } from "@/hooks/useObraAtiva";
 import { useObras } from "@/hooks/useObras";
-import { formatCents } from "@/lib/format";
+import { formatCents, parseBudgetToCents } from "@/lib/format";
 
 const periods = ["Hoje", "7 dias", "30 dias", "Personalizado"] as const;
 
@@ -26,9 +27,10 @@ export default function MateriaisPage() {
   const [materialSearch, setMaterialSearch] = useState("");
   const { shellProjects } = useObras();
   const { activeProject } = useObraAtiva(shellProjects);
-  const { compras, materiais, loading, error } = useMateriais(
+  const { compras, materiais, loading, error, createCompra } = useMateriais(
     activeProject?.id ?? null
   );
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const totalSpentCents = useMemo(
     () => compras.reduce((sum, item) => sum + item.totalCents, 0),
@@ -144,7 +146,14 @@ export default function MateriaisPage() {
   return (
     <AppShell
       title="Compras, Notas Fiscais e Garantias"
-      subtitle="Consulte gastos, materiais, documentos e garantias organizados pelo Obrio AI."
+      subtitle="Registre compras e acompanhe materiais da obra ativa."
+      action={
+        activeProject ? (
+          <PrimaryButton type="button" onClick={() => setShowCreateForm((v) => !v)}>
+            + Compra
+          </PrimaryButton>
+        ) : undefined
+      }
     >
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
@@ -180,6 +189,55 @@ export default function MateriaisPage() {
           <p className="font-semibold text-graphite/70">
             Selecione uma obra para ver compras e materiais.
           </p>
+        </Card>
+      ) : null}
+
+      {showCreateForm && activeProject ? (
+        <section className="mt-4">
+          <CreateRecordPanel
+            title="Nova compra"
+            description="Registre fornecedor e valor total da compra."
+            submitLabel="Salvar compra"
+            onCancel={() => setShowCreateForm(false)}
+            fields={[
+              { name: "supplier", label: "Fornecedor", placeholder: "Ex: Materiais Silva" },
+              {
+                name: "total",
+                label: "Valor total (R$)",
+                required: true,
+                placeholder: "Ex: 1200"
+              },
+              {
+                name: "purchase_date",
+                label: "Data da compra",
+                type: "date",
+                defaultValue: new Date().toISOString().slice(0, 10)
+              },
+              { name: "notes", label: "Observações", type: "textarea" }
+            ]}
+            onSubmit={async (values) => {
+              const total_cents = parseBudgetToCents(values.total);
+              if (total_cents <= 0) throw new Error("Informe um valor válido.");
+              await createCompra({
+                supplier: values.supplier.trim() || undefined,
+                total_cents,
+                purchase_date: values.purchase_date || undefined,
+                notes: values.notes.trim() || undefined
+              });
+              setShowCreateForm(false);
+            }}
+          />
+        </section>
+      ) : null}
+
+      {!loading && activeProject && !compras.length && !showCreateForm ? (
+        <Card className="mt-4">
+          <p className="text-sm font-semibold text-graphite/65">
+            Nenhuma compra registrada. Lance a primeira para acompanhar gastos.
+          </p>
+          <PrimaryButton type="button" className="mt-3" onClick={() => setShowCreateForm(true)}>
+            + Registrar compra
+          </PrimaryButton>
         </Card>
       ) : null}
 

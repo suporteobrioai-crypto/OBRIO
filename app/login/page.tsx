@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import AuthScreen from "@/components/auth/AuthScreen";
+import { redirect } from "next/navigation";
 
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <AuthScreen />
-    </Suspense>
-  );
+export default function LoginRedirectPage() {
+  redirect("/");
 }

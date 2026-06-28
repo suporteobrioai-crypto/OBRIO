@@ -1,10 +1,28 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  isOnboardingPath,
+  isProfileComplete
+} from "@/lib/auth/profile-onboarding";
+import {
   getPostLoginPath,
   isProtectedPath
 } from "@/lib/auth/post-login-path";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
+import type { ProfileRow } from "@/lib/types/database";
+
+async function fetchProfile(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string
+) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, whatsapp")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return data as Pick<ProfileRow, "full_name" | "whatsapp"> | null;
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -47,6 +65,12 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/cadastro");
 
+  if (!user && isOnboardingPath(pathname)) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/";
+    return NextResponse.redirect(redirectUrl);
+  }
+
   if (!user && isProtected) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/";
@@ -54,11 +78,30 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isAuthRoute) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = await getPostLoginPath(supabase, user.id);
-    redirectUrl.search = "";
-    return NextResponse.redirect(redirectUrl);
+  if (user) {
+    const profile = await fetchProfile(supabase, user.id);
+    const profileComplete = isProfileComplete(profile);
+
+    if (!profileComplete && isProtected) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/onboarding";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (profileComplete && isOnboardingPath(pathname)) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/dashboard";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (isAuthRoute) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = await getPostLoginPath(supabase, user.id);
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   return supabaseResponse;

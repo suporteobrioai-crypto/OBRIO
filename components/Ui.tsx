@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Camera, FileUp, Mic, Upload } from "lucide-react";
 
 export function Card({
@@ -96,12 +96,17 @@ export function SelectField({
 }
 
 export function PrimaryButton({
-  children
-}: {
-  children: ReactNode;
-}) {
+  children,
+  className = "",
+  type = "button",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-[8px] bg-foundation px-4 text-sm font-black text-white transition hover:bg-moss sm:min-h-11">
+    <button
+      type={type}
+      className={`inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-[8px] bg-foundation px-4 text-sm font-black text-white transition hover:bg-moss disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-11 ${className}`}
+      {...props}
+    >
       {children}
     </button>
   );

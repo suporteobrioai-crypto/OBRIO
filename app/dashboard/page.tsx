@@ -1,16 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowRight,
   Bell,
+  Building2,
   CheckCircle2,
-  CloudRain,
   FileText,
   PackageCheck,
+  ReceiptText,
   TriangleAlert,
+  Users,
   WalletCards
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ObraWeatherCard } from "@/components/ObraWeatherCard";
 import { Card, Metric } from "@/components/Ui";
 import { useLembretes } from "@/hooks/useLembretes";
 import { useDiario } from "@/hooks/useDiario";
@@ -18,27 +23,12 @@ import { useMateriais } from "@/hooks/useMateriais";
 import { useObraAtiva } from "@/hooks/useObraAtiva";
 import { useObras } from "@/hooks/useObras";
 import { usePagamentos } from "@/hooks/usePagamentos";
+import { useProfile } from "@/hooks/useProfile";
 import { formatCents } from "@/lib/format";
 import { ACTIVE_PROJECT_STORAGE_KEY } from "@/lib/obras";
 
-const progressByMonth = [
-  { label: "Jan", value: 10 },
-  { label: "Fev", value: 22 },
-  { label: "Mar", value: 35 },
-  { label: "Abr", value: 41 }
-];
-
-const forecast = [
-  { day: "Hoje", condition: "Nublado", temperature: "24°", rain: "20%", favorable: true },
-  { day: "Qui", condition: "Chuva", temperature: "22°", rain: "80%", favorable: false },
-  { day: "Sex", condition: "Chuva", temperature: "23°", rain: "70%", favorable: false },
-  { day: "Sáb", condition: "Sol", temperature: "27°", rain: "10%", favorable: true },
-  { day: "Dom", condition: "Sol", temperature: "28°", rain: "5%", favorable: true },
-  { day: "Seg", condition: "Nublado", temperature: "25°", rain: "30%", favorable: true },
-  { day: "Ter", condition: "Sol", temperature: "27°", rain: "10%", favorable: true }
-];
-
 export default function DashboardPage() {
+  const { profile } = useProfile();
   const { shellProjects, obras } = useObras();
   const { activeProject } = useObraAtiva(shellProjects);
   const { reminders } = useLembretes(activeProject?.id ?? null);
@@ -196,9 +186,14 @@ export default function DashboardPage() {
         value: String(compras.length),
         text: compras[0]?.supplier ?? "Consulte materiais"
       },
-      { icon: CloudRain, label: "Alertas climáticos", value: "1", text: "Evite pintura externa" }
+      {
+        icon: FileText,
+        label: "Registros no diário",
+        value: String(diarioEntries.length),
+        text: diarioEntries[0]?.content.slice(0, 60) ?? "Nenhum registro ainda"
+      }
     ],
-    [reminders, pendingPayments, compras]
+    [reminders, pendingPayments, compras, diarioEntries]
   );
 
   useEffect(() => {
@@ -215,13 +210,65 @@ export default function DashboardPage() {
   }, []);
 
   if (!currentProject) {
+    const displayName = profile?.full_name?.trim() || "bem-vindo";
+    const moduleLinks = [
+      { label: "Obras", href: "/obras", icon: Building2 },
+      { label: "Diário da Obra", href: "/diario", icon: FileText },
+      { label: "Materiais e NF", href: "/materiais", icon: ReceiptText },
+      { label: "Mão de obra", href: "/mao-de-obra", icon: Users },
+      { label: "Lembretes", href: "/lembretes", icon: Bell }
+    ];
+
     return (
-      <AppShell title="Dashboard da obra" subtitle="Crie uma obra para começar.">
-        <Card>
-          <p className="font-semibold text-graphite/70">
-            Nenhuma obra cadastrada. Acesse Obras → Nova Obra.
+      <AppShell
+        title="Dashboard"
+        subtitle="Visão geral do Obrio AI — crie uma obra quando quiser começar."
+      >
+        <Card className="border-build/20 bg-[#FFFBF7]">
+          <p className="text-sm font-black uppercase text-build">Olá, {displayName}</p>
+          <h2 className="mt-2 text-2xl font-black text-foundation">
+            Seu painel está pronto
+          </h2>
+          <p className="mt-3 text-sm font-semibold leading-6 text-graphite/70">
+            Explore os módulos abaixo. Quando quiser acompanhar uma reforma ou
+            obra, crie sua primeira obra — isso não é obrigatório agora.
           </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/obras/nova"
+              className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-[8px] bg-foundation px-5 text-base font-black text-white"
+            >
+              Criar primeira obra
+              <ArrowRight size={20} />
+            </Link>
+            <Link
+              href="/obras"
+              className="inline-flex h-14 flex-1 items-center justify-center rounded-[8px] border border-black/10 bg-white px-5 text-base font-black text-foundation"
+            >
+              Ver todas as obras
+            </Link>
+          </div>
         </Card>
+
+        <section className="mt-6">
+          <h3 className="text-sm font-black uppercase text-graphite/50">
+            Funcionalidades
+          </h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {moduleLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 rounded-[8px] border border-black/8 bg-white p-4 shadow-soft transition hover:border-build/30"
+              >
+                <span className="grid h-11 w-11 place-items-center rounded-[8px] bg-concrete text-build">
+                  <item.icon size={20} />
+                </span>
+                <span className="text-sm font-black text-foundation">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
       </AppShell>
     );
   }
@@ -267,11 +314,17 @@ export default function DashboardPage() {
           </div>
 
           <div className="rounded-[8px] bg-white/8 p-4">
-            <p className="text-xs font-black uppercase text-build">Status geral</p>
+            <p className="text-xs font-black uppercase text-build">Resumo rápido</p>
             <div className="mt-3 grid gap-2">
-              <StatusLine tone="green">Dentro do prazo</StatusLine>
-              <StatusLine tone="green">Dentro do orçamento</StatusLine>
-              <StatusLine tone="orange">Atenção: chuva prevista</StatusLine>
+              <StatusLine tone="green">
+                {compras.length} compra(s) · {pagamentos.length} pagamento(s)
+              </StatusLine>
+              <StatusLine tone="green">
+                {diarioEntries.length} registro(s) no diário
+              </StatusLine>
+              <StatusLine tone="orange">
+                {reminders.filter((r) => r.status !== "completed").length} lembrete(s) pendente(s)
+              </StatusLine>
             </div>
           </div>
         </div>
@@ -284,28 +337,8 @@ export default function DashboardPage() {
       </section>
 
       <section className="mt-5">
-        <SectionTitle>Evolução da Obra</SectionTitle>
-        <div className="mt-3 grid gap-4 xl:grid-cols-3">
-          <Card>
-            <h3 className="font-black text-foundation">Progresso mensal</h3>
-            <div className="mt-5 flex h-44 items-end gap-3">
-              {progressByMonth.map((item) => (
-                <div key={item.label} className="flex h-full flex-1 flex-col justify-end">
-                  <span className="mb-2 text-center text-xs font-black text-build">
-                    {item.value}%
-                  </span>
-                  <div
-                    className="min-h-3 rounded-t-[6px] bg-foundation"
-                    style={{ height: `${item.value * 2.6}px` }}
-                  />
-                  <span className="mt-2 text-center text-xs font-bold text-graphite/55">
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
+        <SectionTitle>Financeiro da obra</SectionTitle>
+        <div className="mt-3 grid gap-4 xl:grid-cols-2">
           <Card>
             <h3 className="font-black text-foundation">Gastos por categoria</h3>
             <div className="mt-5 grid gap-5">
@@ -377,55 +410,15 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="mt-5">
-        <Card>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase text-build">Clima da obra</p>
-              <h2 className="mt-1 text-xl font-black text-foundation">Previsão para São Paulo</h2>
-            </div>
-            <CloudRain size={24} className="shrink-0 text-build" />
-          </div>
-
-          <div className="mt-5 grid gap-5 xl:grid-cols-[230px_1fr]">
-            <div className="rounded-[8px] bg-foundation p-5 text-white">
-              <p className="text-4xl font-black">24°C</p>
-              <p className="mt-2 font-black">Nublado</p>
-              <p className="mt-1 text-sm font-semibold text-white/70">Chance de chuva: 20%</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-              {forecast.map((day) => (
-                <div
-                  key={day.day}
-                  className={`rounded-[8px] p-3 text-center ${
-                    day.favorable ? "bg-[#EAF4EF]" : "bg-[#FFF0E5]"
-                  }`}
-                >
-                  <p className="text-xs font-black text-foundation">{day.day}</p>
-                  <p className="mt-2 text-lg font-black text-foundation">{day.temperature}</p>
-                  <p className="mt-1 text-xs font-bold text-graphite/60">{day.condition}</p>
-                  <p className="mt-1 text-xs font-black text-build">{day.rain}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5 rounded-[8px] border-l-4 border-build bg-concrete p-4">
-            <p className="text-xs font-black uppercase text-build">Análise do Obrio AI</p>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <Advice tone="warning">Evite pintura externa quinta e sexta.</Advice>
-              <Advice tone="warning">Evite concretagem na quinta-feira.</Advice>
-              <Advice tone="ok">Instalações internas estão liberadas.</Advice>
-              <Advice tone="ok">Sábado e domingo são favoráveis para pintura.</Advice>
-            </div>
-          </div>
-        </Card>
-      </section>
+      {currentObra?.city ? (
+        <section className="mt-5">
+          <ObraWeatherCard city={currentObra.city} state={currentObra.state} />
+        </section>
+      ) : null}
 
       <section className="mt-5 grid gap-4 xl:grid-cols-[380px_1fr]">
         <Card>
-          <h2 className="text-xl font-black text-foundation">Obrio AI registrou hoje</h2>
+          <h2 className="text-xl font-black text-foundation">Resumo de hoje</h2>
           <div className="mt-4 grid gap-2">
             {registeredToday.map((item) => (
               <div key={item.text} className="flex items-center gap-3 rounded-[8px] bg-concrete p-3">
@@ -541,25 +534,6 @@ function BudgetBar({
       <div className="mt-2 h-5 overflow-hidden rounded-[6px] bg-concrete">
         <div className={`h-full rounded-[6px] ${color}`} style={{ width: `${width}%` }} />
       </div>
-    </div>
-  );
-}
-
-function Advice({
-  children,
-  tone
-}: {
-  children: React.ReactNode;
-  tone: "ok" | "warning";
-}) {
-  return (
-    <div className="flex items-start gap-2 text-sm font-bold leading-5 text-foundation">
-      {tone === "ok" ? (
-        <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-moss" />
-      ) : (
-        <TriangleAlert size={17} className="mt-0.5 shrink-0 text-build" />
-      )}
-      {children}
     </div>
   );
 }

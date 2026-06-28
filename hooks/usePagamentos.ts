@@ -88,11 +88,14 @@ export function usePagamentos(obraId: string | null) {
     async (input: Omit<CreatePrestadorInput, "obra_id">) => {
       if (!obraId) throw new Error("Selecione uma obra");
       const supabase = createClient();
-      const { error: insertError } = await supabase
+      const { data, error: insertError } = await supabase
         .from("prestadores")
-        .insert(buildPrestadorPayload({ ...input, obra_id: obraId }));
+        .insert(buildPrestadorPayload({ ...input, obra_id: obraId }))
+        .select("id")
+        .single();
       if (insertError) throw new Error(insertError.message);
       await refetch();
+      return (data as { id: string }).id;
     },
     [obraId, refetch]
   );
