@@ -99,7 +99,8 @@ AppShell bloqueia nova obra quando `obras.length >= limits.obraLimit`.
 ## Route handlers (server-only)
 
 - `/auth/callback`, `/auth/signout` — feito
-- Futuro: `/api/webhooks/stripe`, `/api/ai/chat`, `/api/export/pdf`
+- `/api/webhooks/hotmart` — compra → invite → Resend
+- Futuro (pós-sistema): sync Hotmart → `subscriptions`; `/api/ai/chat`, `/api/export/pdf`
 
 **Não** criar `app/api/obras/*` — RLS cobre via client.
 

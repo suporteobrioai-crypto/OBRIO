@@ -4,7 +4,7 @@
 
 ## Visão geral
 
-**Obrio AI** é um SaaS de gestão de obras e reformas. A raiz (`/`) é a tela de login; módulos autenticados usam Supabase com RLS. Deploy em Cloudflare Workers ([obrioai.app](https://obrioai.app)).
+**Obrio AI** é um SaaS de gestão de obras e reformas. A raiz (`/`) é a tela de login; módulos autenticados usam Supabase com RLS. Monetização via **Hotmart** (sem checkout in-app). Deploy em Cloudflare Workers ([obrioai.app](https://obrioai.app)).
 
 ## Documentos
 
@@ -12,19 +12,20 @@
 |-----------|----------|
 | [PRODUCT.md](./PRODUCT.md) | Visão de produto, personas, módulos, fluxos |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Stack, pastas, hooks, middleware, Cloudflare |
-| [ROUTES.md](./ROUTES.md) | Mapa de 20 rotas, nav, status integrado/stub |
+| [ROUTES.md](./ROUTES.md) | Mapa de rotas, nav (7 itens), redirects, APIs |
 | [DESIGN-SYSTEM.md](./DESIGN-SYSTEM.md) | Cores, tipografia, componentes Ui.tsx |
-| [DATA-MODEL.md](./DATA-MODEL.md) | Schema Supabase + migrations 001–008 |
-| [DEVELOPMENT.md](./DEVELOPMENT.md) | Setup local, scripts, convenções |
-| [INTEGRATIONS.md](./INTEGRATIONS.md) | Supabase, IA, WhatsApp, clima, pagamentos |
+| [DATA-MODEL.md](./DATA-MODEL.md) | Schema Supabase + migrations 001–009 |
+| [DEVELOPMENT.md](./DEVELOPMENT.md) | Setup local, scripts, Hotmart/Resend dev |
+| [INTEGRATIONS.md](./INTEGRATIONS.md) | Supabase, Hotmart, Resend, IA, clima, WhatsApp |
 | [SECURITY.md](./SECURITY.md) | Auth, RLS, secrets, headers, LGPD |
 | [TESTING.md](./TESTING.md) | Vitest, Playwright E2E, CI |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Cloudflare + checklist produção |
+| [SETUP_ACCOUNTS.md](./SETUP_ACCOUNTS.md) | Contas Supabase, Cloudflare, Hotmart, Resend |
 | [ROADMAP.md](./ROADMAP.md) | Fases F0–F4, gaps, prioridades |
 
 ## Cursor Agent Skills
 
-Skills do projeto em `.cursor/skills/` (guia o agente de IA do Cursor):
+Skills do projeto em `.cursor/skills/`:
 
 | Skill | Quando usar |
 |-------|-------------|
@@ -57,12 +58,13 @@ Skills do projeto em `.cursor/skills/` (guia o agente de IA do Cursor):
 
 | Área | Status |
 |------|--------|
-| UI (20 rotas) | Implementado |
-| Supabase Auth + DB + RLS | Integrado (migrations 001–008 aplicadas) |
-| Hooks em `hooks/` | Integrado |
-| Testes unitários | Vitest |
-| Testes E2E | Playwright |
+| UI + nav enxuto | Implementado |
+| Supabase Auth + DB + RLS | Integrado (migrations 001–009) |
+| CRUD núcleo + formulários de captura | Integrado |
+| Hotmart webhook + signup | Código pronto; secrets produção pendentes |
+| Assinatura | Read-only + link Hotmart |
+| Testes unitários + E2E | Vitest + Playwright |
 | CI | `.github/workflows/ci.yml` |
 | Deploy Cloudflare | `wrangler.jsonc` + `deploy.yml` → obrioai.app |
 
-Última atualização: sincronização docs + produção (F4 parcial).
+Última atualização: simplificação UX, captura real, Hotmart-only, docs sincronizados.

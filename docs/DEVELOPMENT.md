@@ -14,37 +14,52 @@ cd obrio-ai
 npm install
 cp .env.example .env.local
 # Preencher NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY
-# (ou NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
 
 npm run dev
 ```
 
 App em **http://localhost:3000** — a raiz (`/`) é o login.
 
-### Fase atual: login de teste
-
-Por enquanto o foco é **entrar no app** com um usuário de teste. O cadastro pós-compra (Hotmart) fica desligado até a configuração final do Supabase.
-
-**Mínimo no `.env.local`:**
+### Mínimo no `.env.local`
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://kvofxprsmzyxssjpyfmy.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon
 NEXT_PUBLIC_SIGNUP_ENABLED=false
+NEXT_PUBLIC_AI_DOCK_ENABLED=false
+NEXT_PUBLIC_WHATSAPP_FAB_ENABLED=false
 ```
 
-**Login:** abra `/`, informe email e senha de um usuário já criado no Supabase Auth (Authentication → Users).
+**Login de teste:** `/` → onboarding (primeira vez) → `/dashboard`.
 
-**E2E / CI:** opcionalmente defina `E2E_USER_EMAIL` e `E2E_USER_PASSWORD` com o mesmo usuário de teste.
+**E2E:** `E2E_USER_EMAIL` e `E2E_USER_PASSWORD` no `.env.local`.
 
-**Depois (fase Supabase):** migration `009_signup_invites`, webhook Hotmart, Resend, `NEXT_PUBLIC_SIGNUP_ENABLED=true`.
+### Cadastro pós-compra (Hotmart + Resend)
 
-Migrations já aplicadas no remoto (001–008). A `009` fica para a fase pós-compra.
-
-Para ambiente Supabase novo (fase final):
+Requer migration `009_signup_invites` aplicada no Supabase remoto:
 
 ```bash
-supabase db push --linked -p "SUA_SENHA_DB" --yes
+npx supabase db push --linked
+```
+
+Variáveis adicionais:
+
+```env
+NEXT_PUBLIC_SIGNUP_ENABLED=true
+HOTMART_HOTTOK=dev-token-local
+SIGNUP_TOKEN_SECRET=string-longa-aleatoria
+SUPABASE_SECRET_KEY=sb_secret_...
+RESEND_API_KEY=re_...
+EMAIL_FROM=Obrio AI <onboarding@resend.dev>
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SIGNUP_ALLOW_OPEN=false
+```
+
+Testes locais:
+
+```bash
+npx tsx scripts/create-test-invite.ts seu@email.com --send-email
+npx tsx scripts/simulate-hotmart-webhook.ts seu@email.com
 ```
 
 ## Scripts disponíveis
@@ -63,22 +78,24 @@ supabase db push --linked -p "SUA_SENHA_DB" --yes
 
 ## Variáveis de ambiente
 
-Arquivo: `.env.local` (nunca commitar)
+Arquivo: `.env.local` (nunca commitar). Template completo: `.env.example`
 
 | Variável | Onde usar | Obrigatória |
 |----------|-----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Client + Server | Sim |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client + Server | Sim* |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Alternativa ao ANON_KEY | Sim* |
-| `NEXT_PUBLIC_SITE_URL` | URLs absolutas (prod) | Deploy |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server/admin only | Não no client |
-| `E2E_USER_EMAIL` | Playwright / login de teste | E2E only |
-| `E2E_USER_PASSWORD` | Playwright / login de teste | E2E only |
-| `NEXT_PUBLIC_SIGNUP_ENABLED` | Exibe aba Criar conta | Não (default `false`) |
+| `NEXT_PUBLIC_SITE_URL` | URLs absolutas | Deploy / emails |
+| `NEXT_PUBLIC_SIGNUP_ENABLED` | Aba Criar conta | Não (default `false`) |
+| `NEXT_PUBLIC_SALES_PAGE_URL` | Link Hotmart na UI | Recomendado |
+| `NEXT_PUBLIC_AI_DOCK_ENABLED` | Dock IA no AppShell | Não (default `false`) |
+| `NEXT_PUBLIC_WHATSAPP_FAB_ENABLED` | FAB contato | Não (default `false`) |
+| `SUPABASE_SECRET_KEY` | Webhook, signup API | Hotmart flow |
+| `HOTMART_HOTTOK` | Valida webhook | Hotmart flow |
+| `SIGNUP_TOKEN_SECRET` | Hash tokens invite | Hotmart flow |
+| `RESEND_API_KEY` | Email pós-compra | Hotmart flow |
+| `OPENAI_API_KEY` | `/api/ai/chat` | Opcional |
 
-\* Uma das duas chaves publishable/anon.
-
-Template: `.env.example`
+\* Ou `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
 ## Estrutura e alias
 
@@ -100,20 +117,17 @@ Template: `.env.example`
 4. Documentar em [ROUTES.md](./ROUTES.md)
 5. Adicionar link em `navItems` se aplicável
 
-## Assets estáticos
+## Componentes de captura
 
-| Arquivo | Uso |
-|---------|-----|
-| `public/favicon.svg` | Favicon do app |
-| `public/obrio-logo.png` | Opcional — ObrioMark usa fallback inline |
-| `public/_headers` | Headers Cloudflare |
+- `CreateRecordPanel` — formulário reutilizável para create*
+- Usado em: diário, materiais, pagamentos, lembretes
 
 ## Testes
 
 ```bash
-npm test                    # unit
-npm run test:e2e            # E2E (credenciais E2E no .env.local)
-PLAYWRIGHT_BASE_URL=... npm run test:e2e   # contra URL externa
+npm test
+npm run test:e2e
+PLAYWRIGHT_BASE_URL=https://obrioai.app npm run test:e2e   # contra produção
 ```
 
 Ver [TESTING.md](./TESTING.md).
@@ -126,10 +140,13 @@ Ver [TESTING.md](./TESTING.md).
 | Supabase não conecta | Verificar `.env.local` e restart |
 | Build falha | `npm run lint` + corrigir TS |
 | E2E skipped | Definir `E2E_USER_EMAIL` e `E2E_USER_PASSWORD` |
+| Webhook 401 | `HOTMART_HOTTOK` no header `X-Hotmart-Hottok` |
+| Resend 403 | Usar `onboarding@resend.dev` em dev |
 
 ## Referências
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [ROUTES.md](./ROUTES.md)
+- [INTEGRATIONS.md](./INTEGRATIONS.md)
 - [DEPLOYMENT.md](./DEPLOYMENT.md)
 - [TESTING.md](./TESTING.md)

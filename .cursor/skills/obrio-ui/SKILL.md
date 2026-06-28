@@ -42,7 +42,14 @@ Usar `AppShell` com `title`, `subtitle`, `action?`:
 <AppShell title="Materiais" subtitle="Compras e garantias da obra.">
 ```
 
-AppShell fornece sidebar, nav mobile, seletor de obra, dock IA e FAB WhatsApp — **não duplicar** esses elementos na page.
+AppShell fornece sidebar, nav mobile, seletor de obra — **não duplicar** esses elementos na page.
+
+Dock IA e FAB WhatsApp são **opcionais** (feature flags, default off):
+
+- `NEXT_PUBLIC_AI_DOCK_ENABLED=true`
+- `NEXT_PUBLIC_WHATSAPP_FAB_ENABLED=true` + `NEXT_PUBLIC_WHATSAPP_URL`
+
+Priorizar botões **+ Registrar** (`CreateRecordPanel`) nas páginas de captura.
 
 ## Padrão de página
 

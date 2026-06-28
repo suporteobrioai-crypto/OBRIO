@@ -13,104 +13,44 @@ Personas: dono da obra, responsável técnico, colaborador convidado.
 
 ## Módulos e rotas
 
-| Módulo | Rota | Persistência MVP |
-|--------|------|------------------|
-| Dashboard | `/dashboard` | Mock |
-| Obras | `/obras`, `/obras/nova` | Mock |
-| Diário | `/diario` | Mock |
-| Materiais | `/materiais` | Mock |
-| Mão de obra | `/mao-de-obra` | Mock |
-| Responsáveis | `/trocar-obra` | CRUD local |
-| Lembretes | `/lembretes` | CRUD local |
-| Relatórios | `/relatorios` | Mock + export stub |
-| Assistente | `/assistente` | Stub |
-| Perfil / Assinatura / Config | `/perfil`, `/assinatura`, `/configuracoes` | Stub |
-| Financeiro / Recibos / Clima / Equipe | rotas órfãs | Mock/stub |
+| Módulo | Rota | Persistência |
+|--------|------|--------------|
+| Dashboard | `/dashboard` | Hooks agregados + clima (`/api/weather`) |
+| Obras | `/obras`, `/obras/nova` | Supabase |
+| Diário | `/diario` | `createEntry` |
+| Materiais | `/materiais` | `createCompra` |
+| Mão de obra | `/mao-de-obra` | `createPagamento` + `createPrestador` |
+| Responsáveis | `/responsaveis` | CRUD Supabase |
+| Lembretes | `/lembretes` | CRUD + `createReminder` |
+| Relatórios | `/relatorios` | Dados reais + export `.txt` |
+| Perfil / Assinatura / Config | `/perfil`, `/assinatura`, `/configuracoes` | Perfil + subscription reais |
+| Financeiro | `/financeiro` | Agrega hooks (órfã) |
+
+Redirects legados: `/trocar-obra` → `/responsaveis`, `/equipe` → `/responsaveis`, `/clima`/`/recibos`/`/assistente` → `/dashboard`, `/login` → `/`.
 
 Detalhe completo: `docs/ROUTES.md`
 
 ## Obra ativa (contexto global)
 
-- Seletor no `AppShell` — não confundir com rota `/trocar-obra`
+- Seletor no `AppShell` — distinto da rota `/responsaveis`
 - Persistência: `localStorage` key `obrio-active-project`
-- Evento: `CustomEvent("obrio:project-change")` para sync com dashboard
-- Alvo: hook `useObraAtiva()` + Supabase
-
-## Tipos de obra
-
-- **Obra completa** vs **Reforma** (enum DB)
-- Status: Ativa, Pausada, Concluída, Arquivada
-- Campos: orçamento, gasto, progresso 0–100%, datas, endereço, responsável
+- Evento: `CustomEvent("obrio:project-change")`
+- Hook: `useObraAtiva()`
 
 ## Planos e limites
 
-Hardcoded em `AppShell` (`planRules`):
+Tabela `subscriptions` + `PLAN_LIMITS` em `lib/types/database.ts`. UI em `/perfil` e `/assinatura` via `useSubscription()`.
 
-| Plano (demo) | Limite obras | Responsáveis/obra |
-|--------------|--------------|-------------------|
-| Premium | 10 | 1 |
+## Captura de dados
 
-UI de comparação em `/assinatura`. Pagamento ainda stub.
+Prioridade: botões **+ Registrar** em Diário, Compras, Pagamentos e Lembretes (`CreateRecordPanel`).
 
-## Regras de negócio
+Dock IA (`NEXT_PUBLIC_AI_DOCK_ENABLED=true`) chama `POST /api/ai/chat`.
 
-### Materiais
-- Compras com NF, categorias, garantias com alerta de vencimento
-- Filtros por período (Hoje, 7d, 30d, Personalizado)
-- Dock IA: consultas em linguagem natural sobre gastos
+## Feature flags
 
-### Mão de obra
-- Pagamentos a prestadores (pedreiro, eletricista, etc.)
-- Status: pago, pendente, atrasado
-- Alertas financeiros e próximos vencimentos
-
-### Lembretes
-- CRUD funcional in-memory: completar, adiar, editar título, excluir
-- Canais planejados: app + WhatsApp
-- Agrupados por data na agenda
-
-### Responsáveis (`/trocar-obra`)
-- Um responsável principal por obra (limite plano)
-- Validação de formulário no modal
-- **Não** é troca de obra — naming debt documentado
-
-### Equipe (`/equipe`) — órfã
-- Colaboradores com permissões
-- Overlap com responsáveis — unificar na Fase 2
-
-### Diário
-- Entradas cronológicas com anexos (fotos)
-- Filtros por período, autor, tag
-- Dock IA registra entrada por texto (stub)
-
-### Relatórios
-- Gráficos de custo e progresso
-- Análise IA (stub)
-- Export PDF/Excel (stub)
-
-## Assistente IA (dock global)
-
-Rotas com dock: dashboard, diario, materiais, mao-de-obra, lembretes, relatorios, assistente.
-
-Placeholders contextuais por módulo em `AppShell.tsx`. Envio ainda simulado.
-
-## Integrações planejadas
-
-| Integração | Módulo |
-|------------|--------|
-| Supabase | Todos |
-| WhatsApp | Lembretes, clima, config |
-| Clima API | Dashboard, `/clima` |
-| Stripe | `/assinatura` |
-| LLM | Assistente, SmartCapture, relatórios |
-
-Ver `docs/INTEGRATIONS.md`
-
-## Naming debts (não amplificar)
-
-- `/trocar-obra` → renomear para `/responsaveis` (breaking change futuro)
-- Consolidar `/equipe` com responsáveis/colaboradores
-- Normalizar status mock ("Em andamento") → DB ("Ativa")
+- `NEXT_PUBLIC_AI_DOCK_ENABLED` — default `false`
+- `NEXT_PUBLIC_WHATSAPP_FAB_ENABLED` + `NEXT_PUBLIC_WHATSAPP_URL`
 
 ## Referências
 
@@ -118,4 +58,3 @@ Ver `docs/INTEGRATIONS.md`
 - `docs/ROUTES.md`
 - `docs/DATA-MODEL.md`
 - `docs/ROADMAP.md`
-- `components/AppShell.tsx` — nav, planRules, projects mock

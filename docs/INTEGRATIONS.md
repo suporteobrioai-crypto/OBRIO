@@ -13,7 +13,6 @@ flowchart LR
   AI["LLM API"]
   WA["WhatsApp"]
   Weather["Clima API"]
-  Stripe["Stripe"]
 
   HM --> App
   App --> Supa
@@ -21,7 +20,6 @@ flowchart LR
   App -.-> AI
   App -.-> WA
   App -.-> Weather
-  App -.-> Stripe
 ```
 
 | Integração | Estado | Prioridade |
@@ -32,8 +30,8 @@ flowchart LR
 | Supabase Storage | **Integrado** (avatars, diário) | P1 ✅ |
 | Assistente IA | Dock UI only | P1 |
 | WhatsApp | FAB → config, copy only | P2 |
-| Clima | Mock no dashboard/clima | P2 |
-| Stripe (assinatura) | Stub UI + tabela `subscriptions` | P3 |
+| Clima | API Open-Meteo no dashboard | P2 |
+| Hotmart billing (sync plano) | **Pendente** — após núcleo do produto | P4 |
 
 ---
 
@@ -49,9 +47,9 @@ flowchart LR
 | Email boas-vindas | Resend → link `/?mode=cadastro&email&token` |
 | Cadastro | `POST /api/auth/signup` (email + senha + WhatsApp, sem OTP) |
 | Pós-cadastro | Aba Entrar na mesma tela (sem auto-login) |
-| Login | `signInWithPassword` → onboarding via `post-login-path` |
+| Login | `signInWithPassword` → onboarding de perfil ou `/dashboard` |
 
-Login: `signInWithPassword` → `/obras/nova` ou `/dashboard`.
+Login: `signInWithPassword` → `/onboarding` (perfil incompleto) ou `/dashboard`.
 
 Logout: POST `/auth/signout` → redirect `/`.
 
@@ -90,24 +88,23 @@ Subscriptions em lembretes ou colaboração — Fase 3+.
 
 ---
 
-## Assistente IA (pendente)
+## Assistente IA (parcial)
 
 ### UI atual
 
-- Dock global em `AppShell.tsx` (`showObrioInput`)
-- Página `/assistente`
-- Placeholders contextuais por rota
-- Envio simulado (notice string)
+- Dock global em `AppShell.tsx` — **oculto por padrão** (`NEXT_PUBLIC_AI_DOCK_ENABLED=false`)
+- Página `/assistente` → redirect `/dashboard`
+- `POST /api/ai/chat` — resposta stub ou OpenAI se `OPENAI_API_KEY`
 
 ### Arquitetura alvo
 
 ```
-Browser → POST /app/api/ai/chat → LLM provider
+Browser → POST /api/ai/chat → LLM provider
                 ↓
          Context: obra_id, módulo, histórico
+                ↓
+         Persistência parseada (compras, pagamentos, etc.)
 ```
-
-**Opções:** OpenAI, Anthropic, Vercel AI SDK, Cloudflare Workers AI
 
 ---
 
@@ -115,28 +112,23 @@ Browser → POST /app/api/ai/chat → LLM provider
 
 ### UI atual
 
-- `WhatsAppIcon` component
-- FAB no AppShell → `/configuracoes`
-- Campo número WhatsApp em configurações e perfil
+- FAB **oculto por padrão** (`NEXT_PUBLIC_WHATSAPP_FAB_ENABLED=false`)
+- Quando ativo: link externo via `NEXT_PUBLIC_WHATSAPP_URL`
+- Campo WhatsApp em perfil e onboarding
 
 ### Arquitetura alvo
 
-Lembretes diários, alertas clima, OTP alternativo via WhatsApp Business API.
+Lembretes diários, alertas clima via WhatsApp Business API.
 
 ---
 
-## Clima (pendente)
+## Clima (integrado no dashboard)
 
 ### UI atual
 
-- Widget mock no `/dashboard`
-- Página `/clima` — previsão 7 dias estática
-
-### Arquitetura alvo
-
-- API: OpenWeatherMap ou INMET
-- Cache por cidade da obra
-- Route Handler: `app/api/weather/route.ts`
+- `ObraWeatherCard` no `/dashboard` — cidade da obra ativa
+- `GET /api/weather` — Open-Meteo (geocoding + previsão 7 dias)
+- `/clima` → redirect `/dashboard`
 
 ---
 
@@ -160,7 +152,7 @@ Usuário cadastra → POST /api/auth/signup → aba Entrar → login
 | `app/api/auth/signup/route.ts` | Cadastro server-side |
 | `lib/hotmart/parse-event.ts` | Parser payload |
 | `lib/email/send-purchase-welcome.ts` | Envio Resend |
-| `scripts/create-test-invite.ts` | Invite manual para testes |
+| `scripts/create-test-invite.ts` | Invite manual (`--send-email` testa Resend) |
 
 ### Configuração Hotmart
 
@@ -179,25 +171,29 @@ Usuário cadastra → POST /api/auth/signup → aba Entrar → login
 
 ### UI atual
 
-- `/assinatura` — planos Gratuito, Mensal, Premium
+- `/assinatura` — planos Gratuito, Mensal, Premium (read-only via `useSubscription`)
+- Link externo para `NEXT_PUBLIC_SALES_PAGE_URL` (Hotmart)
 - Limites via tabela `subscriptions` + hook `useSubscription`
 
-### Pendente (Stripe)
+### Pendente (fase pós-sistema)
+
+Monetização via Hotmart; integração de plano pós-compra será implementada após finalização do núcleo do produto:
 
 ```
-/assinatura → Stripe Checkout Session
-Webhook → app/api/webhooks/stripe/route.ts
-         → atualiza subscriptions
+Webhook Hotmart → atualiza subscriptions.plan após signup
+Portal Hotmart → upgrade / cancelamento pelo comprador
+/assinatura → espelho read-only + link para página de vendas
 ```
 
 ---
 
-## Export PDF / Excel (pendente)
+## Export PDF / Excel (parcial)
 
 ### UI atual
 
-- `/relatorios` — botões PDF e Excel (stub)
-- `/recibos` — download, print (stub)
+- `/relatorios` — export `.txt` via `POST /api/export/report`
+- Excel desabilitado (em breve)
+- `/recibos` → redirect `/dashboard`
 
 ---
 

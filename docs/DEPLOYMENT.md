@@ -178,6 +178,12 @@ Via `public/_headers` (Cloudflare assets):
 - [ ] SSL Full (strict) + HTTPS redirect
 - [ ] HSTS via dashboard (opcional)
 
+### Supabase
+
+- [ ] Migrations `001`–`009` aplicadas (`npx supabase db push --linked`)
+- [ ] Tabela `signup_invites` existe (migration `009`) antes de ativar Hotmart/Resend
+- [ ] RLS policies ativas nas tabelas core
+
 ### GitHub
 
 - [ ] Secrets configurados (Supabase, Cloudflare, E2E)
@@ -195,7 +201,7 @@ Via `public/_headers` (Cloudflare assets):
 
 ### Pendente pós-MVP
 
-- [ ] Stripe webhooks em produção
+- [ ] Hotmart billing (sync plano) em produção — após núcleo do produto
 - [ ] Sentry ou monitoramento de erros
 - [ ] Política de privacidade publicada
 - [ ] Fluxo delete account (LGPD)

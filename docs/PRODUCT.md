@@ -6,7 +6,7 @@ Donos de obras, reformas e pequenos empreiteiros gerenciam informações crític
 
 ## Proposta de valor
 
-**Obrio AI** centraliza a gestão da obra em um único lugar, com assistente inteligente para captura rápida de dados (texto, foto, áudio) e lembretes proativos — inclusive via WhatsApp.
+**Obrio AI** centraliza a gestão da obra em um único lugar, com captura rápida de dados e lembretes proativos — inclusive via WhatsApp (planejado).
 
 > *"Seu assistente inteligente de obras e reformas."* — metadata em `app/layout.tsx`
 
@@ -16,80 +16,84 @@ Donos de obras, reformas e pequenos empreiteiros gerenciam informações crític
 |---------|----------------------|
 | **Dono da obra** | Visão financeira, prazos, status e relatórios para decisão |
 | **Responsável técnico / mestre de obras** | Diário de obra, registro de compras e pagamentos da equipe |
-| **Colaborador convidado** | Acesso limitado à obra (módulo equipe — planejado) |
+| **Comprador Hotmart** | Entrada rápida pós-compra (email → cadastro → onboarding) |
 
 ## Módulos do produto
 
 | Módulo | Rota | Descrição |
 |--------|------|-----------|
-| Landing / Auth | `/`, `/login` | Login + cadastro na mesma tela |
-| Cadastro (redirect) | `/cadastro` | Redireciona para `/?mode=cadastro` |
-| Dashboard | `/dashboard` | Hub: resumo do dia, métricas, clima, timeline |
+| Landing / Auth | `/`, `/login` → `/` | Login + cadastro pós-compra (flag) |
+| Onboarding perfil | `/onboarding` | Nome, WhatsApp, foto opcional pós-login |
+| Dashboard | `/dashboard` | Hub: métricas reais, clima da obra, timeline |
 | Obras | `/obras`, `/obras/nova` | Lista, filtros, wizard de nova obra |
-| Diário da obra | `/diario` | Linha do tempo com anexos e filtros |
-| Materiais | `/materiais` | Compras, NF, garantias, gráficos |
-| Mão de obra | `/mao-de-obra` | Pagamentos a prestadores, alertas |
-| Responsáveis | `/trocar-obra` | CRUD de responsável por obra |
-| Lembretes | `/lembretes` | Agenda com CRUD local funcional |
-| Relatórios | `/relatorios` | Análise IA, gráficos, export (stub) |
-| Assistente | `/assistente` | Landing do assistente + dock global |
-| Perfil | `/perfil` | Conta, avatar, notificações, senha |
-| Assinatura | `/assinatura` | Planos e limites |
-| Configurações | `/configuracoes` | Notificações, WhatsApp |
-| Financeiro | `/financeiro` | Despesas manuais (rota órfã) |
-| Recibos | `/recibos` | Gerador de recibos (rota órfã) |
-| Clima | `/clima` | Previsão 7 dias (rota órfã) |
-| Equipe | `/equipe` | Colaboradores (rota órfã, overlap com responsáveis) |
+| Diário da obra | `/diario` | Timeline + **criar entrada** |
+| Materiais | `/materiais` | Compras + **registrar compra** |
+| Mão de obra | `/mao-de-obra` | Pagamentos + **registrar pagamento** |
+| Responsáveis | `/responsaveis` | CRUD (`/trocar-obra` → redirect 301) |
+| Lembretes | `/lembretes` | CRUD + **criar lembrete** |
+| Relatórios | `/relatorios` | KPIs reais da obra ativa; export `.txt` |
+| Perfil | `/perfil` | Conta, avatar, plano |
+| Assinatura | `/assinatura` | Plano read-only + link Hotmart |
+| Configurações | `/configuracoes` | Toggles (sem persistência ainda) |
+| Financeiro | `/financeiro` | Visão agregada (rota órfã) |
+
+Redirects legados: `/clima`, `/recibos`, `/assistente` → `/dashboard`; `/equipe` → `/responsaveis`.
 
 ## Fluxos principais
 
 ```mermaid
 flowchart LR
-  Vendas["Página vendas Hotmart"] --> Email["Email boas-vindas"]
-  Email --> Cadastro["Cadastro /?mode=cadastro"]
-  Cadastro --> Login["Aba Entrar mesma tela"]
-  Login --> NovaObra["Nova obra /obras/nova"]
-  NovaObra --> Dashboard["Dashboard"]
-  Dashboard --> Operacao["Operação diária"]
+  Login["Login ou cadastro Hotmart"] --> Onboard["/onboarding"]
+  Onboard --> Dashboard["/dashboard"]
+  Dashboard --> Captura["+ Registrar compra/pagamento/diário/lembrete"]
 ```
 
-### 1. Aquisição
-Compra Hotmart → email com link → cadastro (email + senha + WhatsApp) → login → onboarding (`/obras/nova` ou `/dashboard`).
+### 1. Aquisição e entrada (Hotmart)
+
+Compra Hotmart → webhook → email Resend → link cadastro → `POST /api/auth/signup` → onboarding → dashboard.
 
 ### 2. Onboarding de obra
-Wizard de 11 passos em `/obras/nova`: nome, tipo, localização, orçamento, metas, datas, etc. Modo manual ou IA (UI parcial).
+
+Wizard de 11 passos em `/obras/nova`: nome, tipo, localização, orçamento, metas, datas.
 
 ### 3. Operação diária
-- Registrar no diário (fotos, texto)
-- Lançar compras e pagamentos (SmartCaptureBox + dock IA)
-- Gerenciar lembretes
-- Trocar obra ativa via AppShell
+
+- **+ Registrar** em Diário, Compras, Pagamentos e Lembretes (formulários persistidos no Supabase)
+- Seletor de obra ativa no AppShell
+- Dashboard com totais e timeline reais
 
 ### 4. Fechamento / relatório
-Relatórios com filtros de período, export PDF/Excel (stub), análise IA (stub).
+
+Relatórios com KPIs da obra ativa; export textual (`.txt`). Excel e PDF avançados — pendente.
 
 ## Planos e limites
 
-Hardcoded em `components/AppShell.tsx` (`planRules`):
+Tabela `subscriptions` + `PLAN_LIMITS` em `lib/types/database.ts`:
 
-| Plano | Limite de obras | Responsáveis por obra |
-|-------|-----------------|----------------------|
-| Gratuito | (UI em `/assinatura`) | — |
-| Mensal | (UI em `/assinatura`) | — |
-| **Premium** (demo) | 10 | 1 |
+| Plano | Obras | Responsáveis/obra |
+|-------|-------|-------------------|
+| Gratuito | 1 | 1 |
+| Mensal | 5 | 5 |
+| Premium | 10 | 10 |
 
-A página `/assinatura` exibe comparação visual dos planos; pagamento ainda é stub.
+- **Compra:** apenas via Hotmart (`NEXT_PUBLIC_SALES_PAGE_URL`)
+- **`/assinatura`:** espelho read-only do plano; upgrade/cancelamento in-app **após conclusão do núcleo**
+- Sync automático Hotmart → `subscriptions.plan` — **fase pós-sistema**
 
 ## Estado atual vs. visão
 
-| Capacidade | MVP atual | Produção alvo |
-|------------|-----------|---------------|
-| UI completa | Sim | Sim |
-| Dados persistentes | Não (mocks) | Supabase |
-| Auth real | Não | Supabase Auth |
-| IA funcional | Não (dock UI) | API + LLM |
-| WhatsApp | FAB → config | API Business |
-| Export PDF/Excel | Stub | Geração server-side |
+| Capacidade | Estado atual |
+|------------|--------------|
+| UI + nav enxuto | ✅ |
+| Dados persistentes (núcleo) | ✅ Supabase + RLS |
+| Auth + onboarding | ✅ |
+| Captura CRUD (4 módulos) | ✅ |
+| Relatórios reais | ✅ (export `.txt`) |
+| Clima por cidade da obra | ✅ Open-Meteo |
+| Hotmart + Resend | ✅ código; secrets prod pendentes |
+| Assistente IA | Stub (`/api/ai/chat`; dock off por default) |
+| WhatsApp API | Pendente |
+| Billing Hotmart → plano | Pendente (pós-sistema) |
 
 Ver [ROADMAP.md](./ROADMAP.md) para fases de evolução.
 
@@ -98,3 +102,4 @@ Ver [ROADMAP.md](./ROADMAP.md) para fases de evolução.
 - [ROUTES.md](./ROUTES.md) — detalhe por rota
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — stack e camadas
 - [DATA-MODEL.md](./DATA-MODEL.md) — entidades de dados
+- [INTEGRATIONS.md](./INTEGRATIONS.md) — Hotmart, Resend, APIs

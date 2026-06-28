@@ -54,7 +54,7 @@ Adicionar testes co-localizados ou em `lib/__tests__/` para novos utils.
 `e2e/auth-flow.spec.ts`:
 
 1. Visit `/` → formulário de login visível
-2. Login com credenciais E2E → redirect `/dashboard` ou `/obras/nova`
+2. Login com credenciais E2E → `/onboarding` (perfil incompleto) ou `/dashboard`
 3. Logout via menu AppShell → volta ao login em `/`
 
 ### Credenciais E2E
@@ -76,10 +76,14 @@ Se ausentes, os testes E2E são **skipped** automaticamente.
 
 ### Rodar localmente
 
+**Importante:** pare qualquer `npm run dev` antes de rodar E2E — o Playwright sobe `npm run start` na porta 3001 e compartilha `.next` com o dev; dois servidores ao mesmo tempo corrompem o cache (404 em `/_next/static`).
+
 ```bash
 npm run build
 E2E_USER_EMAIL=... E2E_USER_PASSWORD=... npm run test:e2e
 ```
+
+Alternativa com dev já rodando (sem `webServer` duplicado): defina `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000` e rode os testes com o dev **único** ativo.
 
 Instalar browsers (primeira vez):
 
@@ -113,7 +117,8 @@ Após `verify`: build + `npm run test:e2e` com secrets E2E.
 | Criar obra via wizard | E2E | P1 |
 | CRUD lembrete | E2E | P1 |
 | RLS (2 usuários) | Manual | P0 |
-| Stripe webhook | Integration | P2 |
+| Redirects legados | E2E | P1 |
+| Hotmart webhook (sync plano) | Integration | P4 — pós-sistema |
 | API IA | Integration | P2 |
 
 ---

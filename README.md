@@ -9,15 +9,22 @@ MVP de gestão de obras e reformas com assistente inteligente — mercado brasil
 | Frontend | Next.js 15 (App Router), React 18, TypeScript |
 | Estilo | Tailwind CSS 3, lucide-react |
 | Backend | Supabase (Auth, Postgres, Storage, RLS) |
+| Monetização | Hotmart (webhook + Resend) — sem pagamento in-app |
 | Deploy | Cloudflare Workers + OpenNext |
 
 ## Estado do projeto
 
 | Área | Status |
 |------|--------|
-| UI (20 rotas) | Implementado |
-| Supabase (Auth, DB, hooks) | Integrado |
-| Auth / middleware | Login em `/`, proteção de rotas, signout |
+| UI (rotas principais + redirects legados) | Implementado |
+| Supabase (Auth, DB, hooks, CRUD núcleo) | Integrado |
+| Captura (diário, compras, pagamentos, lembretes) | Formulários + hooks |
+| Nav enxuto (7 itens) + `/responsaveis` | Implementado |
+| Relatórios | Dados reais da obra ativa + export `.txt` |
+| Clima | Open-Meteo via `/api/weather` no dashboard |
+| Hotmart + Resend (cadastro pós-compra) | Código pronto; migration `009` + secrets |
+| Assinatura | Read-only (`useSubscription`) + link Hotmart |
+| Dock IA / FAB WhatsApp | Ocultos por padrão (feature flags) |
 | Testes unitários | Vitest (`npm test`) |
 | Testes E2E | Playwright (`npm run test:e2e`) |
 | CI/CD | GitHub Actions (lint, test, build, deploy) |
@@ -27,11 +34,24 @@ MVP de gestão de obras e reformas com assistente inteligente — mercado brasil
 
 ```bash
 npm install
-cp .env.example .env.local   # NEXT_PUBLIC_SUPABASE_URL + ANON_KEY
+cp .env.example .env.local   # Supabase + flags opcionais
 npm run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000) — a raiz é a tela de login.
+
+### Cadastro pós-compra (opcional, local)
+
+```env
+NEXT_PUBLIC_SIGNUP_ENABLED=true
+HOTMART_HOTTOK=dev-token-local
+SIGNUP_TOKEN_SECRET=...
+RESEND_API_KEY=...
+SUPABASE_SECRET_KEY=...
+```
+
+Testes: `npx tsx scripts/create-test-invite.ts email@exemplo.com --send-email`  
+Webhook simulado: `npx tsx scripts/simulate-hotmart-webhook.ts email@exemplo.com`
 
 ## Scripts
 
@@ -55,19 +75,13 @@ Documentação completa em **[docs/](./docs/README.md)**:
 - [Segurança](./docs/SECURITY.md) · [Testes](./docs/TESTING.md) · [Deploy](./docs/DEPLOYMENT.md)
 - [Roadmap](./docs/ROADMAP.md)
 
-## Cursor Agent Skills
-
-Skills do projeto em `.cursor/skills/` para guiar desenvolvimento com IA:
-
-- `obrio-conventions` — convenções de código
-- `obrio-ui` — design system e páginas
-- `obrio-supabase` — Auth, DB, RLS
-- `obrio-features` — domínio construção civil
-
 ## Supabase
 
-1. Copie `.env.example` → `.env.local`
-2. Migrations `001`–`008` em `supabase/migrations/` (aplicadas no remoto via `supabase db push`)
+Migrations `001`–`009` em `supabase/migrations/`. Aplicar no remoto:
+
+```bash
+npx supabase db push --linked
+```
 
 Projeto: `kvofxprsmzyxssjpyfmy` · Dashboard: [supabase.com/dashboard](https://supabase.com/dashboard/project/kvofxprsmzyxssjpyfmy/settings/api)
 

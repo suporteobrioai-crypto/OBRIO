@@ -19,7 +19,7 @@ Rotas públicas: `/`, `/login`, `/cadastro`.
 
 Rotas protegidas: todas as demais → redirect para `/` se sem sessão.
 
-Usuário autenticado em `/`, `/login` ou `/cadastro` → onboarding (`/obras/nova` ou `/dashboard`).
+Usuário autenticado em `/`, `/login` ou `/cadastro` → `/onboarding` ou `/dashboard` conforme perfil.
 
 ---
 
@@ -80,7 +80,7 @@ Quando implementar equipe: policy adicional por `member_user_id` + role.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client | OK (com RLS) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server only** | Nunca `NEXT_PUBLIC_` |
 | `CLOUDFLARE_API_TOKEN` | CI only | Nunca no client |
-| API keys IA / Stripe / WhatsApp | Server only | Route handlers |
+| API keys IA / WhatsApp | Server only | Route handlers |
 
 ### Checklist
 

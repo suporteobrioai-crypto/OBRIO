@@ -35,8 +35,11 @@ Roadmap de evolução do MVP para produto em produção.
 - Layout responsivo mobile-first
 - Auth real (login, cadastro OTP, signout POST, middleware)
 - Obras persistidas no Supabase (listagem, wizard, seletor no AppShell)
-- Lembretes e responsáveis persistidos (`/lembretes`, `/trocar-obra`)
-- Diário, materiais e mão de obra consumindo hooks + RLS
+- Lembretes, responsáveis, diário, compras e pagamentos com **formulários de criação**
+- Relatórios com dados reais da obra ativa + export `.txt`
+- Nav enxuto (7 itens); `/responsaveis` substitui `/trocar-obra`
+- Dock IA e FAB WhatsApp ocultos por padrão (feature flags)
+- `/api/ai/chat`, `/api/weather`, `/api/export/report`
 - Perfil com dados reais e upload de avatar (bucket `avatars`)
 - Limites de plano via tabela `subscriptions` no AppShell
 - Dashboard agregando obra ativa + lembretes + diário + financeiro
@@ -47,23 +50,20 @@ Roadmap de evolução do MVP para produto em produção.
 
 ### O que ainda é stub / placeholder
 
-- Export PDF/Excel em relatórios
-- Assinatura Stripe (webhook)
-- Assistente IA (envio simulado)
+- Export Excel em relatórios
+- Sync Hotmart → `subscriptions.plan` (billing pós-sistema)
 - Câmera/áudio (modal de permissão apenas)
-- Recibos (download/print)
-- `/clima`, `/equipe` — UI mock sem backend dedicado
-- `/configuracoes`, `/assinatura` — toggles e planos sem Stripe
+- Recibos (PDF server-side)
+- `/configuracoes` — toggles sem persistência
+- Alterar/cancelar assinatura in-app (após conclusão do núcleo)
 
-### Débitos técnicos prioritários (F3/F4)
+### Débitos técnicos prioritários
 
-1. Stripe webhook + enforcement de assinatura paga
-2. Route handler IA (`/api/ai/chat`)
-3. Resolver rotas órfãs (`/recibos`, `/clima`, `/equipe`) — nav ou fusão
-4. Renomear `/trocar-obra` → `/responsaveis` (breaking change coordenado)
-5. LGPD: política de privacidade, delete account, export de dados
-6. Otimização RLS `(select auth.uid())` (performance)
-7. E2E expandido: criar obra → lembrete
+1. Hotmart billing: webhook atualiza plano após signup (fase pós-sistema)
+2. Persistência parseada do dock IA (após Fase 2 ✅)
+3. LGPD: política de privacidade, delete account, export de dados
+4. Refatorar `AppShell` em subcomponentes
+5. E2E expandido: criar lembrete autenticado
 
 ---
 
@@ -125,7 +125,7 @@ Roadmap de evolução do MVP para produto em produção.
 
 | Integração | Abordagem |
 |------------|-----------|
-| Assistente IA | `app/api/ai/route.ts` + LLM |
+| Assistente IA | `POST /api/ai/chat` + LLM |
 | SmartCapture | OCR/extração de NF via IA |
 | WhatsApp | Business API ou provedor |
 | Clima | OpenWeather ou similar |
@@ -147,7 +147,7 @@ Roadmap de evolução do MVP para produto em produção.
 | CI/CD GitHub Actions | Concluído |
 | Deploy Cloudflare + OpenNext | Concluído |
 | Headers de segurança | Concluído |
-| Assinatura Stripe | Pendente |
+| Assinatura Hotmart (sync plano) | Pendente — após núcleo do produto |
 | Monitoramento (Sentry) | Pendente |
 | LGPD completa | Pendente |
 
@@ -157,7 +157,7 @@ Roadmap de evolução do MVP para produto em produção.
 
 ## Priorização sugerida (próximos 30 dias)
 
-1. Stripe Checkout + webhooks
+1. Hotmart billing: sync `subscriptions` após signup
 2. Assistente IA (route handler + dock)
 3. E2E expandido (obra + lembrete)
 4. LGPD mínima (política + delete account)

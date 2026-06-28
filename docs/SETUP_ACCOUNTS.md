@@ -100,19 +100,30 @@ Em https://github.com/suporteobrioai-crypto/OBRIO/settings/secrets/actions:
 ## 4. Teste local
 
 ```powershell
-npm run dev
+npm run dev -- -p 3000
 ```
 
-1. Com link de teste: `npx tsx scripts/create-test-invite.ts voce@email.com`
-2. Abrir link → cadastro (email + senha + WhatsApp) → aba Entrar → login
-3. `/obras/nova` → criar obra → ver em `/obras`
+1. **Invite + email Resend:** `npx tsx scripts/create-test-invite.ts voce@email.com --send-email`
+2. **Webhook Hotmart simulado:** `npx tsx scripts/simulate-hotmart-webhook.ts voce@email.com`
+3. Abrir link → cadastro (email + senha + WhatsApp) → aba Entrar → login
+4. `/obras/nova` → criar obra → ver em `/obras`
+
+Variáveis locais em `.env.local`: `NEXT_PUBLIC_SIGNUP_ENABLED=true`, `RESEND_API_KEY`, `EMAIL_FROM`, `HOTMART_HOTTOK` (dev), `SIGNUP_TOKEN_SECRET`.
+
+Para dev, use `EMAIL_FROM=Obrio AI <onboarding@resend.dev>` até verificar `obrioai.app` no Resend.
 
 ## 5. Hotmart + Resend (produção)
 
-1. Aplicar migration `009_signup_invites.sql` no Supabase
-2. Configurar secrets: `HOTMART_HOTTOK`, `SIGNUP_TOKEN_SECRET`, `RESEND_API_KEY`, `SUPABASE_SECRET_KEY`
-3. Hotmart → Webhook → `https://obrioai.app/api/webhooks/hotmart`
-4. Resend → verificar domínio `obrioai.app`
+1. Migration `009_signup_invites` aplicada no Supabase (`signup_invites`)
+2. **Cloudflare Worker secrets** (`wrangler secret put` ou Dashboard → obrio-ai → Settings → Variables):
+   - `HOTMART_HOTTOK` — token da Hotmart (Ferramentas → Webhook)
+   - `SIGNUP_TOKEN_SECRET` — string longa aleatória (diferente do dev)
+   - `RESEND_API_KEY`
+   - `SUPABASE_SECRET_KEY` (ou `SUPABASE_SERVICE_ROLE_KEY`)
+   - `EMAIL_FROM` — ex. `Obrio AI <noreply@obrioai.app>` após domínio verificado
+3. **Hotmart** → Ferramentas → Webhook → URL `https://obrioai.app/api/webhooks/hotmart`, evento compra aprovada
+4. **Resend** → verificar domínio `obrioai.app` e usar remetente `@obrioai.app`
+5. **Habilitar cadastro em produção:** `NEXT_PUBLIC_SIGNUP_ENABLED=true` em `wrangler.jsonc` e `.github/workflows/deploy.yml` (somente após Hotmart configurada)
 
 ## 6. Teste produção
 

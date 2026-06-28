@@ -54,10 +54,11 @@ obrio-ai/
 
 ### Páginas standalone (sem AppShell)
 
-- `/` — auth unificado (Entrar + Criar conta)
+- `/` — auth unificado (Entrar + Criar conta quando habilitado)
 - `/login` — alias do auth unificado
 - `/cadastro` — redirect para `/?mode=cadastro`
-- `/obras/nova` — wizard fullscreen
+- `/onboarding` — wizard de perfil pós-login (standalone)
+- `/obras/nova` — wizard de nova obra (opcional, via dashboard/Obras)
 
 ### Páginas com AppShell
 
@@ -106,9 +107,9 @@ flowchart TB
   Public["/ /login /cadastro"]
   Protected["/dashboard /obras/..."]
   Login["redirect → /"]
-  Onboard["redirect → /obras/nova"]
+  Onboard["redirect → /onboarding"]
   Dash["redirect → /dashboard"]
-  Check{"Tem obras?"}
+  Check{"Perfil completo?"}
 
   Request --> MW --> Refresh
   Refresh -->|sem user + protected| Login
@@ -119,7 +120,7 @@ flowchart TB
   Refresh -->|sem user + public| Public
 ```
 
-Pós-login (login form, callback, middleware): [`lib/auth/post-login-path.ts`](../lib/auth/post-login-path.ts) — sem obras → `/obras/nova`; com obras → `/dashboard`. Parâmetro `?redirect=` respeitado se apontar para rota protegida.
+Pós-login (login form, callback, middleware): perfil incompleto → `/onboarding`; perfil completo → `/dashboard`. Cadastro de obra em `/obras/nova` é opcional.
 
 ## Decisões arquiteturais
 
@@ -137,8 +138,8 @@ Pós-login (login form, callback, middleware): [`lib/auth/post-login-path.ts`](.
 ## Pontos de atenção
 
 1. **AppShell grande** — extrair `ProjectSelector` quando crescer.
-2. **Rotas secundárias mock** — `/recibos`, `/clima`, `/equipe` sem backend.
-3. **Assinatura** — limites via `subscriptions`; Stripe ainda não integrado.
+2. **Rotas legadas** — `/recibos`, `/clima`, `/assistente` redirecionam; `/equipe` → `/responsaveis`.
+3. **Assinatura** — limites via `subscriptions`; compra na Hotmart; billing in-app após núcleo pronto.
 4. **E2E** — auth flow coberto; expandir para obra/lembrete.
 
 ## Referências

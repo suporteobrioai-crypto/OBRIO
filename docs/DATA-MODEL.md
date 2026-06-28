@@ -2,10 +2,10 @@
 
 Schema Supabase existente, entidades inferidas da UI e proposta alvo.
 
-## Schema existente (migrations 001–008)
+## Schema existente (migrations 001–009)
 
 Arquivo base: `supabase/migrations/001_obrio_core.sql`  
-Extensões: `002_obras_extend.sql` … `008_obra_members.sql`
+Extensões: `002_obras_extend.sql` … `008_obra_members.sql`, `009_signup_invites.sql`
 
 ### `profiles`
 
@@ -61,6 +61,24 @@ Projetos de construção/reforma.
 | 006 | `prestadores`, `pagamentos` | `comprovantes` |
 | 007 | `subscriptions`, extensão `profiles` | `avatars` |
 | 008 | `obra_members` (futuro `/equipe`) | — |
+| 009 | `signup_invites` (cadastro pós-compra Hotmart) | — |
+
+### `signup_invites` (009)
+
+Convites de cadastro gerados pelo webhook Hotmart.
+
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | uuid PK | |
+| email | text | |
+| token_hash | text | hash do token do link |
+| hotmart_transaction_id | text unique | idempotência |
+| buyer_name, buyer_phone | text | opcional |
+| plan | text | gratuito, mensal, premium |
+| consumed_at, revoked_at | timestamptz | |
+| expires_at | timestamptz | default +30 dias |
+
+**RLS:** sem policies — acesso apenas via service role (webhook/signup API).
 
 RLS padrão para filhas de obra: join com `obras.owner_id = auth.uid()`.
 
@@ -109,7 +127,7 @@ Campos vistos em `app/diario/page.tsx`:
 | status | status enum (pendente, concluído, adiado) |
 | canal | channel enum (app, whatsapp) |
 
-### Responsáveis (`/trocar-obra`)
+### Responsáveis (`/responsaveis`)
 
 | Campo UI | Coluna sugerida |
 |----------|-----------------|
@@ -130,7 +148,7 @@ Campos vistos em `app/diario/page.tsx`:
 
 | Entidade | Campos |
 |----------|--------|
-| `subscriptions` | user_id, plan, status, stripe_customer_id, current_period_end |
+| `subscriptions` | user_id, plan, status, `stripe_customer_id` (legado/reservado → renomear `hotmart_subscriber_id` na fase billing), current_period_end |
 
 ### Recibos
 
@@ -179,19 +197,18 @@ create policy "obra_child_all_own" on public.diario_entries
 
 ---
 
-## Mapeamento mock → DB
+## Mapeamento UI → DB (atual)
 
-| Mock (AppShell / páginas) | Tabela/coluna |
-|---------------------------|---------------|
-| `projects[].id` (string slug) | `obras.id` (uuid) |
-| `projects[].budget` ("R$ 180.000") | `obras.budget_cents` (18000000) |
-| `projects[].status` ("Em andamento") | Normalizar para enum DB |
-| `localStorage obrio-active-project` | `obras.id` selecionado |
-| `planRules` (Premium, 10) | `subscriptions` + feature flags |
+| UI | Fonte de dados |
+|----|----------------|
+| Seletor obra ativa | `localStorage` + `useObraAtiva` |
+| Métricas dashboard | hooks agregados por `obra_id` |
+| Limites de plano | `subscriptions` via `useSubscription` |
+| Captura (+ Registrar) | hooks `create*` → Supabase |
 
 ### Normalização de status
 
-| UI (mock) | DB |
+| UI (exibição) | DB |
 |-----------|-----|
 | Em andamento | Ativa |
 | Pausada | Pausada |
