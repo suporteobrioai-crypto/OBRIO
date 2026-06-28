@@ -43,6 +43,7 @@ jobs:
       - name: Verify production serves login (not landing)
         run: |
           html=$(curl -sfL "https://obrio-ai.obrioai.workers.dev/")
-          echo "$html" | grep -q "Entrar" || (echo "Expected login form on homepage" && exit 1)
-          echo "$html" | grep -q "hero-bg" && (echo "Landing page still deployed" && exit 1) || true
-          echo "Homepage verification passed"
+          echo "$html" | grep -q "hero-bg" && (echo "Landing page still deployed (hero-bg)" && exit 1)
+          echo "$html" | grep -q "Controle sua obra sem planilhas" && (echo "Landing page still deployed (marketing copy)" && exit 1)
+          echo "$html" | grep -q "favicon.svg" || (echo "Expected new app build with favicon" && exit 1)
+          echo "Homepage verification passed (landing removed, login is client-rendered)"
