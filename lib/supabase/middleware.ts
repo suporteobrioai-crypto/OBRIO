@@ -1,25 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  getPostLoginPath,
+  isProtectedPath
+} from "@/lib/auth/post-login-path";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
-
-const protectedPrefixes = [
-  "/dashboard",
-  "/obras",
-  "/diario",
-  "/financeiro",
-  "/materiais",
-  "/mao-de-obra",
-  "/recibos",
-  "/lembretes",
-  "/clima",
-  "/relatorios",
-  "/assistente",
-  "/equipe",
-  "/trocar-obra",
-  "/perfil",
-  "/configuracoes",
-  "/assinatura"
-];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -56,9 +41,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isProtected = protectedPrefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
+  const isProtected = isProtectedPath(pathname);
   const isAuthRoute =
     pathname === "/" ||
     pathname.startsWith("/login") ||
@@ -73,7 +56,8 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    redirectUrl.pathname = await getPostLoginPath(supabase, user.id);
+    redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }
 

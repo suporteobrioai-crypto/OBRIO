@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { Brand } from "@/components/Brand";
+import { resolvePostLoginRedirect } from "@/lib/auth/post-login-path";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/dashboard";
+  const redirectParam = searchParams.get("redirect");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,7 +39,22 @@ export default function LoginForm() {
         return;
       }
 
-      router.push(redirectTo);
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setError("Não foi possível confirmar a sessão. Tente novamente.");
+        return;
+      }
+
+      const destination = await resolvePostLoginRedirect(
+        supabase,
+        user.id,
+        redirectParam
+      );
+
+      router.push(destination);
       router.refresh();
     } catch {
       setError("Configure as variáveis do Supabase em .env.local");

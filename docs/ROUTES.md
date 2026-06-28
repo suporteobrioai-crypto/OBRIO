@@ -14,8 +14,8 @@ Referência completa das rotas do App Router (`app/`).
 
 | Rota | Arquivo | AppShell | Nav | Status | Descrição |
 |------|---------|----------|-----|--------|-----------|
-| `/` | `app/page.tsx` | Não | — | Integrado | Login; redirect `/dashboard` se autenticado |
-| `/login` | `app/login/page.tsx` | Não | — | Integrado | Alias do login |
+| `/` | `app/page.tsx` | Não | — | Integrado | Login; autenticado → `/obras/nova` (sem obras) ou `/dashboard` |
+| `/login` | `app/login/page.tsx` | Não | — | Integrado | Alias do login; mesmo redirect pós-auth |
 | `/cadastro` | `app/cadastro/page.tsx` | Não | — | Integrado | Wizard OTP + senha + perfil (Supabase) |
 | `/dashboard` | `app/dashboard/page.tsx` | Sim | Sim | Integrado | Hub: métricas, lembretes, diário, financeiro |
 | `/obras` | `app/obras/page.tsx` | Sim | Sim | Integrado | Lista obras do Supabase |
@@ -91,6 +91,18 @@ Link destino: `/configuracoes`
 ## Páginas standalone
 
 - `/`, `/login`, `/cadastro`, `/obras/nova`
+
+## Redirect pós-login
+
+Após login, callback OAuth ou visita autenticada a rotas de auth:
+
+| Condição | Destino |
+|----------|---------|
+| Usuário sem obras | `/obras/nova` (onboarding) |
+| Usuário com obras | `/dashboard` |
+| `?redirect=` para rota protegida | Destino solicitado |
+
+Implementado em [`lib/auth/post-login-path.ts`](../lib/auth/post-login-path.ts).
 
 ## Referências
 

@@ -24,5 +24,10 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
 
+# Cadastro (/cadastro) usa signInWithOtp → template magic_link com {{ .Token }}
+[auth.email.template.magic_link]
+subject = "Bem-vindo ao Obrio AI — seu código de confirmação"
+content_path = "./supabase/templates/magic-link.html"
+
 [storage]
 enabled = true

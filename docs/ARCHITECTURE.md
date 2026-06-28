@@ -104,16 +104,22 @@ flowchart TB
   MW["middleware.ts"]
   Refresh["refresh session cookies"]
   Public["/ /login /cadastro"]
-  Protected["/dashboard ..."]
+  Protected["/dashboard /obras/..."]
   Login["redirect → /"]
+  Onboard["redirect → /obras/nova"]
   Dash["redirect → /dashboard"]
+  Check{"Tem obras?"}
 
   Request --> MW --> Refresh
   Refresh -->|sem user + protected| Login
-  Refresh -->|user + auth route| Dash
+  Refresh -->|user + auth route| Check
+  Check -->|não| Onboard
+  Check -->|sim| Dash
   Refresh -->|user + protected| Protected
   Refresh -->|sem user + public| Public
 ```
+
+Pós-login (login form, callback, middleware): [`lib/auth/post-login-path.ts`](../lib/auth/post-login-path.ts) — sem obras → `/obras/nova`; com obras → `/dashboard`. Parâmetro `?redirect=` respeitado se apontar para rota protegida.
 
 ## Decisões arquiteturais
 

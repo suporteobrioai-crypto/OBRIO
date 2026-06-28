@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirme seu email — Obrio AI</title>
+</head>
+<body style="margin:0;padding:0;background-color:#EEF1EF;font-family:Arial,Helvetica,sans-serif;color:#1E2523;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#EEF1EF;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 4px 24px rgba(14,51,42,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#0E332A;padding:28px 32px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td>
+                    <span style="display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;background-color:#F17B22;border-radius:8px;color:#ffffff;font-size:14px;font-weight:700;">OB</span>
+                    <span style="margin-left:10px;font-size:18px;font-weight:700;color:#ffffff;vertical-align:middle;">Obrio AI</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#F17B22;">
+                Bem-vindo
+              </p>
+              <h1 style="margin:0 0 16px;font-size:26px;line-height:1.25;font-weight:900;color:#0E332A;">
+                Confirme seu email para começar
+              </h1>
+              <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#1E2523;">
+                Obrigado por criar sua conta no <strong>Obrio AI</strong>. Use o código abaixo para confirmar
+                <strong>{{ .Email }}</strong> e continuar o cadastro da sua primeira obra.
+              </p>
+
+              <!-- OTP -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;">
+                <tr>
+                  <td align="center" style="background-color:#EEF1EF;border-radius:8px;padding:20px;">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;color:#1E2523;opacity:0.55;">
+                      Seu código de confirmação
+                    </p>
+                    <p style="margin:0;font-size:36px;font-weight:900;letter-spacing:0.35em;color:#0E332A;">
+                      {{ .Token }}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#1E2523;opacity:0.72;">
+                O código expira em breve. Se você não solicitou este cadastro, ignore este email.
+              </p>
+              <p style="margin:0;font-size:14px;line-height:1.6;color:#1E2523;opacity:0.72;">
+                Depois de confirmar, você define sua senha e WhatsApp para receber avisos da obra.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px;border-top:1px solid rgba(30,37,35,0.08);">
+              <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#1E2523;opacity:0.55;">
+                Obrio AI — gestão de obras com clareza e controle.
+              </p>
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#1E2523;opacity:0.45;">
+                <a href="{{ .SiteURL }}" style="color:#1E5C4C;text-decoration:none;">{{ .SiteURL }}</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
