@@ -6,13 +6,12 @@ export function ObrioMark({
   className?: string;
 }) {
   return (
-    <img
-      src="/obrio-logo.png"
-      width={size}
-      height={size}
-      alt=""
+    <span
       aria-hidden="true"
-      className={`block rounded-[8px] ${className}`}
-    />
+      className={`inline-grid place-items-center rounded-[8px] bg-foundation font-black text-white ${className}`}
+      style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.38)) }}
+    >
+      OB
+    </span>
   );
 }

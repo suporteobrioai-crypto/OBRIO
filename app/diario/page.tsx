@@ -1,92 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CalendarDays,
   ChevronDown,
-  FileAudio,
   FileImage,
   Filter,
   MessageSquareText,
   Paperclip
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { Card, Field, SelectField } from "@/components/Ui";
-
-const entries = [
-  {
-    date: "Hoje",
-    time: "16:20",
-    type: "Diário",
-    origin: "Obrio AI",
-    text: "Concluímos a laje e registramos 12 fotos.",
-    attachments: ["12 fotos", "Texto"],
-    icon: FileImage
-  },
-  {
-    date: "Hoje",
-    time: "14:10",
-    type: "Compra",
-    origin: "WhatsApp",
-    text: "Chegaram 30 sacos de cimento e 5 m³ de areia.",
-    attachments: ["Nota fiscal", "Foto"],
-    icon: FileImage
-  },
-  {
-    date: "Ontem",
-    time: "18:05",
-    type: "Áudio",
-    origin: "Obrio AI",
-    text: "Início da instalação elétrica nos quartos.",
-    attachments: ["Áudio de 0:42"],
-    icon: FileAudio
-  },
-  {
-    date: "05/06/2026",
-    time: "09:30",
-    type: "Pagamento",
-    origin: "Manual",
-    text: "Pagamento de R$ 800 confirmado para João Pereira.",
-    attachments: ["Comprovante"],
-    icon: Paperclip
-  },
-  {
-    date: "04/06/2026",
-    time: "08:00",
-    type: "Lembrete",
-    origin: "Obrio AI",
-    text: "Comprar tinta para a área externa na sexta-feira.",
-    attachments: [],
-    icon: MessageSquareText
-  }
-];
+import { Card, SelectField } from "@/components/Ui";
+import { useDiario } from "@/hooks/useDiario";
+import { useObraAtiva } from "@/hooks/useObraAtiva";
+import { useObras } from "@/hooks/useObras";
 
 const recordTypes = [
   "Todos",
   "Texto",
   "Foto",
-  "Áudio",
   "Compra",
   "Pagamento",
   "Lembrete",
-  "Clima",
-  "Alteração da obra"
+  "Clima"
 ];
 
 export default function DiarioPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const { shellProjects } = useObras();
+  const { activeProject } = useObraAtiva(shellProjects);
+  const { entries, loading, error } = useDiario(activeProject?.id ?? null);
+
+  const filteredEntries = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase("pt-BR");
+    if (!query) return entries;
+    return entries.filter(
+      (entry) =>
+        entry.content.toLocaleLowerCase("pt-BR").includes(query) ||
+        entry.author.toLocaleLowerCase("pt-BR").includes(query) ||
+        entry.tags.some((tag) => tag.toLocaleLowerCase("pt-BR").includes(query))
+    );
+  }, [entries, search]);
 
   return (
     <AppShell
       title="Diário da Obra"
       subtitle="Consulte e revise tudo que aconteceu na obra."
     >
+      {!activeProject ? (
+        <Card>
+          <p className="font-semibold text-graphite/70">
+            Selecione ou crie uma obra para ver o diário.
+          </p>
+        </Card>
+      ) : null}
+
+      {error ? (
+        <div className="mb-4 rounded-[8px] bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {error}
+        </div>
+      ) : null}
+
       <section>
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-xl font-black text-foundation">Histórico da Obra</h2>
             <p className="mt-1 text-sm font-semibold leading-6 text-graphite/60">
-              Veja tudo que foi registrado na obra em ordem cronológica.
+              {activeProject
+                ? `Registros de ${activeProject.name}`
+                : "Veja tudo que foi registrado na obra em ordem cronológica."}
             </p>
           </div>
           <button
@@ -106,31 +89,66 @@ export default function DiarioPage() {
 
         <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="order-2 grid min-w-0 gap-3 xl:order-1">
-            {entries.map((entry) => (
+            {loading ? (
+              <Card>
+                <p className="text-sm font-semibold text-graphite/60">Carregando diário…</p>
+              </Card>
+            ) : null}
+            {!loading && !filteredEntries.length ? (
+              <Card>
+                <p className="text-sm font-semibold text-graphite/60">
+                  Nenhum registro no diário ainda.
+                </p>
+              </Card>
+            ) : null}
+            {filteredEntries.map((entry) => (
               <Card
-                key={`${entry.date}-${entry.time}-${entry.text}`}
+                key={entry.id}
                 className="max-w-[calc(100vw-32px)] xl:max-w-none"
               >
                 <div className="flex items-start gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[8px] bg-concrete text-build">
-                    <entry.icon size={19} />
+                    {entry.attachments.length ? (
+                      <FileImage size={19} />
+                    ) : (
+                      <MessageSquareText size={19} />
+                    )}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-xs font-black uppercase text-build">
-                          {entry.date}, {entry.time}
+                          {entry.date}
                         </p>
                         <p className="mt-1 text-xs font-bold text-graphite/50">
-                          {entry.type} · {entry.origin}
+                          Diário · {entry.author}
                         </p>
                       </div>
                       <CalendarDays size={17} className="hidden shrink-0 text-build sm:block" />
                     </div>
 
                     <p className="mt-3 text-sm font-semibold leading-6 text-graphite/78">
-                      {entry.text}
+                      {entry.content}
                     </p>
+
+                    {entry.weatherNote ? (
+                      <p className="mt-2 text-xs font-bold text-graphite/55">
+                        Clima: {entry.weatherNote}
+                      </p>
+                    ) : null}
+
+                    {entry.tags.length ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {entry.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center rounded-[8px] bg-concrete px-2.5 py-1.5 text-xs font-bold text-foundation"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
 
                     {entry.attachments.length ? (
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -140,7 +158,7 @@ export default function DiarioPage() {
                             className="inline-flex items-center gap-1.5 rounded-[8px] bg-concrete px-2.5 py-1.5 text-xs font-bold text-foundation"
                           >
                             <Paperclip size={13} className="text-build" />
-                            {attachment}
+                            {attachment.split("/").pop() ?? attachment}
                           </span>
                         ))}
                       </div>
@@ -160,12 +178,18 @@ export default function DiarioPage() {
                 <h2 className="text-lg font-black text-foundation">Filtros</h2>
               </div>
               <div className="mt-4 grid gap-4">
-                <Field
-                  label="Buscar no diário"
-                  placeholder="laje, elétrica, entrega..."
-                />
-                <Field label="Data inicial" placeholder="" type="date" />
-                <Field label="Data final" placeholder="" type="date" />
+                <label className="block">
+                  <span className="text-sm font-black text-foundation">
+                    Buscar no diário
+                  </span>
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="laje, elétrica, entrega..."
+                    className="mt-2 h-12 w-full rounded-[8px] border border-black/10 bg-white px-3 text-sm outline-none focus:border-build"
+                  />
+                </label>
                 <SelectField label="Tipo de registro" options={recordTypes} />
               </div>
             </Card>

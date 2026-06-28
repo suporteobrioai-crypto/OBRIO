@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -19,49 +19,19 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card, Field, Metric, SelectField } from "@/components/Ui";
+import { useObras } from "@/hooks/useObras";
+import type { ObraView } from "@/lib/obras";
 import { createClient } from "@/lib/supabase/client";
-import { mapObraRow, type ObraView } from "@/lib/obras";
-import type { ObraRow, ObraStatus } from "@/lib/types/database";
+import type { ObraStatus } from "@/lib/types/database";
 const filters = ["Todas", "Ativas", "Pausadas", "Concluídas", "Arquivadas"] as const;
 
 export default function ObrasPage() {
+  const { obras: projects, loading, error, refetch: loadProjects } = useObras();
   const [filter, setFilter] = useState<(typeof filters)[number]>("Todas");
-  const [projects, setProjects] = useState<ObraView[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [configuredProject, setConfiguredProject] = useState<ObraView | null>(
+  const [configuredProject, setConfiguredProject] = useState<(typeof projects)[number] | null>(
     null
   );
   const [newProjectOpen, setNewProjectOpen] = useState(false);
-
-  const loadProjects = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const { data, error: fetchError } = await supabase
-        .from("obras")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (fetchError) {
-        setError(fetchError.message);
-        setProjects([]);
-        return;
-      }
-
-      setProjects((data as ObraRow[]).map(mapObraRow));
-    } catch {
-      setError("Configure as variáveis do Supabase em .env.local");
-      setProjects([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
 
   const filteredProjects = projects.filter((project) => {
     if (filter === "Todas") return true;

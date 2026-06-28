@@ -17,65 +17,19 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Card, Metric } from "@/components/Ui";
+import { useObras } from "@/hooks/useObras";
+import { useResponsaveis } from "@/hooks/useResponsaveis";
+import { useSubscription } from "@/hooks/useSubscription";
+import type { ResponsavelView } from "@/lib/responsaveis";
 
-type Responsible = {
-  id: number;
+type ResponsibleForm = {
   name: string;
   phone: string;
   whatsapp: string;
   email: string;
   role: string;
-  project: string;
-  status: "Ativo" | "Convite pendente";
+  projectId: string;
 };
-
-type ResponsibleForm = Omit<Responsible, "id" | "status">;
-
-const plan = {
-  name: "Premium",
-  projectLimit: 10,
-  responsibleLimit: 10
-};
-
-const projects = [
-  "Casa Vila Mariana",
-  "Reforma Loja Centro",
-  "Apartamento Santos",
-  "Condomínio Riviera"
-];
-
-const initialResponsibles: Responsible[] = [
-  {
-    id: 1,
-    name: "Carlos Mendes",
-    phone: "(11) 98888-1010",
-    whatsapp: "(11) 98888-1010",
-    email: "carlos@obra.com",
-    role: "Gerente da Obra",
-    project: "Casa Vila Mariana",
-    status: "Ativo"
-  },
-  {
-    id: 2,
-    name: "João Silva",
-    phone: "(11) 97777-2020",
-    whatsapp: "(11) 97777-2020",
-    email: "joao@obra.com",
-    role: "Responsável Operacional",
-    project: "Reforma Loja Centro",
-    status: "Ativo"
-  },
-  {
-    id: 3,
-    name: "Marina Costa",
-    phone: "(13) 96666-3030",
-    whatsapp: "(13) 96666-3030",
-    email: "marina@obra.com",
-    role: "Mestre de Obras",
-    project: "Apartamento Santos",
-    status: "Convite pendente"
-  }
-];
 
 const emptyForm: ResponsibleForm = {
   name: "",
@@ -83,14 +37,23 @@ const emptyForm: ResponsibleForm = {
   whatsapp: "",
   email: "",
   role: "",
-  project: ""
+  projectId: ""
 };
 
 export default function ResponsaveisObrasPage() {
-  const [responsibles, setResponsibles] =
-    useState<Responsible[]>(initialResponsibles);
+  const { obras } = useObras();
+  const { limits } = useSubscription();
+  const {
+    responsaveis: responsibles,
+    loading,
+    error,
+    createResponsavel,
+    updateResponsavel,
+    deleteResponsavel
+  } = useResponsaveis(obras);
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ResponsibleForm>(emptyForm);
   const [notice, setNotice] = useState("");
 
@@ -102,21 +65,21 @@ export default function ResponsaveisObrasPage() {
     const linkedProjects = new Set(
       responsibles
         .filter((responsible) => responsible.id !== editingId)
-        .map((responsible) => responsible.project)
+        .map((responsible) => responsible.projectId)
     );
-    return projects.filter((project) => !linkedProjects.has(project));
-  }, [editingId, responsibles]);
+    return obras.filter((obra) => !linkedProjects.has(obra.id));
+  }, [editingId, responsibles, obras]);
 
-  const availableSlots = plan.responsibleLimit - responsibles.length;
+  const availableSlots = limits.responsavelLimit - responsibles.length;
 
   function updateForm(field: keyof ResponsibleForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
   function openNewResponsible() {
-    if (responsibles.length >= plan.responsibleLimit) {
+    if (responsibles.length >= limits.responsavelLimit) {
       setNotice(
-        `O plano ${plan.name} permite até ${plan.responsibleLimit} responsáveis.`
+        `O plano ${limits.label} permite até ${limits.responsavelLimit} responsáveis.`
       );
       return;
     }
@@ -126,7 +89,7 @@ export default function ResponsaveisObrasPage() {
     setModalOpen(true);
   }
 
-  function openEditResponsible(responsible: Responsible) {
+  function openEditResponsible(responsible: ResponsavelView) {
     setEditingId(responsible.id);
     setForm({
       name: responsible.name,
@@ -134,54 +97,60 @@ export default function ResponsaveisObrasPage() {
       whatsapp: responsible.whatsapp,
       email: responsible.email,
       role: responsible.role,
-      project: responsible.project
+      projectId: responsible.projectId
     });
     setNotice("");
     setModalOpen(true);
   }
 
-  function saveResponsible(event: FormEvent<HTMLFormElement>) {
+  async function saveResponsible(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (Object.values(form).some((value) => !value.trim())) {
-      setNotice("Preencha todos os campos para continuar.");
+    if (!form.name.trim() || !form.projectId) {
+      setNotice("Preencha nome e obra para continuar.");
       return;
     }
 
     const projectAlreadyLinked = responsibles.some(
       (responsible) =>
-        responsible.project === form.project && responsible.id !== editingId
+        responsible.projectId === form.projectId && responsible.id !== editingId
     );
     if (projectAlreadyLinked) {
       setNotice("Esta obra já possui um responsável principal.");
       return;
     }
 
-    if (editingId) {
-      setResponsibles((items) =>
-        items.map((item) =>
-          item.id === editingId ? { ...item, ...form } : item
-        )
-      );
-      setNotice("Responsável atualizado com sucesso.");
-    } else {
-      setResponsibles((items) => [
-        ...items,
-        {
-          id: Date.now(),
-          ...form,
-          status: "Convite pendente"
-        }
-      ]);
-      setNotice("Responsável adicionado e convite preparado.");
+    try {
+      if (editingId) {
+        await updateResponsavel(editingId, {
+          obra_id: form.projectId,
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+          role: form.role,
+          status: "Pendente"
+        });
+        setNotice("Responsável atualizado com sucesso.");
+      } else {
+        await createResponsavel({
+          obra_id: form.projectId,
+          name: form.name,
+          phone: form.phone || form.whatsapp,
+          email: form.email,
+          role: form.role,
+          status: "Pendente"
+        });
+        setNotice("Responsável adicionado com sucesso.");
+      }
+      setModalOpen(false);
+      setEditingId(null);
+      setForm(emptyForm);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Erro ao salvar");
     }
-
-    setModalOpen(false);
-    setEditingId(null);
-    setForm(emptyForm);
   }
 
-  function removeResponsible(responsible: Responsible) {
+  async function removeResponsible(responsible: ResponsavelView) {
     if (
       !window.confirm(
         `Remover ${responsible.name} da obra ${responsible.project}?`
@@ -189,10 +158,12 @@ export default function ResponsaveisObrasPage() {
     ) {
       return;
     }
-    setResponsibles((items) =>
-      items.filter((item) => item.id !== responsible.id)
-    );
-    setNotice(`${responsible.name} foi removido da obra.`);
+    try {
+      await deleteResponsavel(responsible.id);
+      setNotice(`${responsible.name} foi removido da obra.`);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Erro ao remover");
+    }
   }
 
   return (
@@ -219,19 +190,19 @@ export default function ResponsaveisObrasPage() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
-          label={`Plano ${plan.name}`}
-          value={`${plan.responsibleLimit} responsáveis permitidos`}
+          label={`Plano ${limits.label}`}
+          value={`${limits.responsavelLimit} responsáveis permitidos`}
           helper="1 responsável por obra"
         />
         <Metric
           label="Responsáveis cadastrados"
-          value={`${responsibles.length}/${plan.responsibleLimit}`}
+          value={`${responsibles.length}/${limits.responsavelLimit}`}
           helper="Principais e ativos"
         />
         <Metric
           label="Obras com responsável"
-          value={`${responsibles.length}/${projects.length}`}
-          helper={`${responsibles.length} de ${projects.length} obras possuem responsável`}
+          value={`${responsibles.length}/${obras.length}`}
+          helper={`${responsibles.length} de ${obras.length} obras possuem responsável`}
         />
         <Metric
           label="Vagas disponíveis"
@@ -422,16 +393,21 @@ export default function ResponsaveisObrasPage() {
                   Obra vinculada
                 </span>
                 <select
-                  value={form.project}
-                  onChange={(event) => updateForm("project", event.target.value)}
+                  value={form.projectId}
+                  onChange={(event) => updateForm("projectId", event.target.value)}
                   className="mt-2 h-12 w-full rounded-[8px] border border-black/10 bg-white px-3 text-sm font-semibold outline-none focus:border-build"
                 >
                   <option value="">Selecione uma obra</option>
                   {availableProjects.map((project) => (
-                    <option key={project} value={project}>
-                      {project}
+                    <option key={project.id} value={project.id}>
+                      {project.name}
                     </option>
                   ))}
+                  {editingId && editingResponsible ? (
+                    <option value={editingResponsible.projectId}>
+                      {editingResponsible.project}
+                    </option>
+                  ) : null}
                 </select>
               </label>
             </div>
@@ -463,7 +439,7 @@ export default function ResponsaveisObrasPage() {
 function ResponsibleIdentity({
   responsible
 }: {
-  responsible: Responsible;
+  responsible: ResponsavelView;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -486,7 +462,7 @@ function ResponsibleIdentity({
   );
 }
 
-function StatusBadge({ status }: { status: Responsible["status"] }) {
+function StatusBadge({ status }: { status: ResponsavelView["status"] }) {
   const active = status === "Ativo";
   return (
     <span

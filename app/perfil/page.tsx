@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Building2,
   CalendarDays,
@@ -19,22 +19,119 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Card } from "@/components/Ui";
+import { useAuth } from "@/hooks/useAuth";
+import { useObras } from "@/hooks/useObras";
+import { useProfile } from "@/hooks/useProfile";
+import { useSubscription } from "@/hooks/useSubscription";
+import { formatDateBr } from "@/lib/format";
+import { getInitials } from "@/lib/obras";
+import { createClient } from "@/lib/supabase/client";
+import { buildAvatarPath } from "@/lib/storage";
 
 export default function PerfilPage() {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { profile, updateProfile } = useProfile();
+  const { limits, plan, subscription } = useSubscription();
+  const { obras } = useObras();
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setFullName(profile?.full_name ?? "");
+    setWhatsapp(profile?.whatsapp ?? "");
+  }, [profile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAvatar() {
+      if (!profile?.avatar_path || avatarFile) return;
+      const supabase = createClient();
+      const { data } = await supabase.storage
+        .from("avatars")
+        .createSignedUrl(profile.avatar_path, 3600);
+      if (!cancelled && data?.signedUrl) {
+        setAvatarPreview(data.signedUrl);
+      }
+    }
+    void loadAvatar();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.avatar_path, avatarFile]);
+
+  const displayName = fullName || user?.email?.split("@")[0] || "Usuário";
+  const initials = getInitials(displayName, user?.email);
+  const memberSince = profile?.created_at
+    ? formatDateBr(profile.created_at.slice(0, 10))
+    : "—";
+  const nextBilling = subscription?.current_period_end
+    ? formatDateBr(subscription.current_period_end.slice(0, 10))
+    : "—";
+
+  const planLabel = useMemo(() => {
+    switch (plan) {
+      case "gratuito":
+        return "Plano Gratuito";
+      case "mensal":
+        return "Plano Mensal";
+      case "premium":
+        return "Plano Premium";
+      default: {
+        const _exhaustive: never = plan;
+        return _exhaustive;
+      }
+    }
+  }, [plan]);
 
   function handleAvatar(file?: File) {
     if (!file) return;
-    if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-    setAvatarUrl(URL.createObjectURL(file));
+    if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
     setNotice("Nova foto selecionada. Salve o perfil para confirmar.");
   }
 
   function removeAvatar() {
-    if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-    setAvatarUrl(null);
-    setNotice("Foto removida. As iniciais serão usadas no perfil.");
+    if (avatarPreview?.startsWith("blob:")) URL.revokeObjectURL(avatarPreview);
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setNotice("Foto removida. Salve o perfil para confirmar.");
+  }
+
+  async function handleSave() {
+    if (!user) return;
+    setSaving(true);
+    setNotice("");
+    try {
+      let avatarPath = profile?.avatar_path ?? null;
+      if (avatarFile) {
+        const supabase = createClient();
+        avatarPath = buildAvatarPath(user.id, avatarFile.name);
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(avatarPath, avatarFile, { upsert: true });
+        if (uploadError) throw new Error(uploadError.message);
+      } else if (avatarPreview === null && profile?.avatar_path) {
+        avatarPath = null;
+      }
+      await updateProfile({
+        full_name: fullName.trim() || null,
+        whatsapp: whatsapp.trim() || null,
+        avatar_path: avatarPath
+      });
+      setAvatarFile(null);
+      setNotice("Perfil salvo com sucesso.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "Não foi possível salvar o perfil."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -44,16 +141,23 @@ export default function PerfilPage() {
       action={
         <button
           type="button"
-          onClick={() => setNotice("Perfil salvo com sucesso.")}
-          className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-[8px] bg-foundation px-4 text-sm font-black text-white transition hover:bg-moss sm:min-h-11"
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-[8px] bg-foundation px-4 text-sm font-black text-white transition hover:bg-moss disabled:opacity-60 sm:min-h-11"
         >
           <Save size={18} />
-          Salvar perfil
+          {saving ? "Salvando…" : "Salvar perfil"}
         </button>
       }
     >
       {notice ? (
-        <div className="mb-4 flex items-center gap-2 rounded-[8px] bg-[#EAF4EF] px-4 py-3 text-sm font-bold text-moss">
+        <div
+          className={`mb-4 flex items-center gap-2 rounded-[8px] px-4 py-3 text-sm font-bold ${
+            notice.includes("sucesso")
+              ? "bg-[#EAF4EF] text-moss"
+              : "bg-red-50 text-red-700"
+          }`}
+        >
           <CheckCircle2 size={18} className="shrink-0" />
           {notice}
         </div>
@@ -65,30 +169,30 @@ export default function PerfilPage() {
             <h2 className="text-xl font-black text-foundation">Foto de perfil</h2>
             <div className="mt-5 flex flex-col items-center text-center">
               <span className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full bg-foundation text-2xl font-black text-white">
-                {avatarUrl ? (
+                {avatarPreview ? (
                   <img
-                    src={avatarUrl}
-                    alt="Foto de Orlando Montes"
+                    src={avatarPreview}
+                    alt={`Foto de ${displayName}`}
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  "OM"
+                  initials
                 )}
               </span>
               <h3 className="mt-4 text-lg font-black text-foundation">
-                Orlando Montes
+                {displayName}
               </h3>
               <p className="mt-1 text-sm font-bold text-graphite/60">
-                Plano Premium
+                {planLabel}
               </p>
               <p className="mt-1 text-xs font-semibold text-graphite/50">
-                Membro desde junho de 2026
+                Membro desde {memberSince}
               </p>
 
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-[8px] bg-concrete px-3 text-sm font-black text-foundation">
                   <Camera size={17} className="text-build" />
-                  {avatarUrl ? "Trocar foto" : "Upload foto"}
+                  {avatarPreview ? "Trocar foto" : "Upload foto"}
                   <input
                     className="hidden"
                     type="file"
@@ -116,12 +220,12 @@ export default function PerfilPage() {
                   Plano atual
                 </p>
                 <h2 className="mt-1 text-xl font-black text-foundation">
-                  Plano Premium
+                  {planLabel}
                 </h2>
               </div>
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-[8px] bg-[#EAF4EF] px-2.5 py-1.5 text-xs font-black text-moss">
                 <span className="h-2 w-2 rounded-full bg-moss" />
-                Assinatura ativa
+                {subscription?.status === "active" ? "Assinatura ativa" : "Plano ativo"}
               </span>
             </div>
 
@@ -129,17 +233,17 @@ export default function PerfilPage() {
               <PlanDetail
                 icon={<Building2 size={16} />}
                 label="Obras cadastradas"
-                value="4 de 10"
+                value={`${obras.length} de ${limits.obraLimit}`}
               />
               <PlanDetail
                 icon={<Users size={16} />}
-                label="Usuários da equipe"
-                value="8"
+                label="Responsáveis permitidos"
+                value={String(limits.responsavelLimit)}
               />
               <PlanDetail
                 icon={<CalendarDays size={16} />}
                 label="Próxima cobrança"
-                value="15/08/2026"
+                value={nextBilling}
               />
             </div>
 
@@ -159,16 +263,22 @@ export default function PerfilPage() {
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <ProfileField label="Nome" defaultValue="Orlando Montes" />
+            <ProfileField
+              label="Nome"
+              value={fullName}
+              onChange={setFullName}
+            />
             <ProfileField
               label="Email"
-              defaultValue="orlando@email.com"
+              value={user?.email ?? ""}
               type="email"
+              readOnly
             />
-            <ProfileField label="Telefone" defaultValue="(11) 99999-9999" />
+            <ProfileField label="Telefone" placeholder="(11) 99999-9999" />
             <ProfileField
               label="WhatsApp"
-              defaultValue="(11) 99999-9999"
+              value={whatsapp}
+              onChange={setWhatsapp}
               icon={<WhatsAppIcon size={19} />}
               helper="Usado para lembretes e mensagens do Obrio AI."
             />
@@ -284,19 +394,25 @@ export default function PerfilPage() {
 function ProfileField({
   label,
   placeholder,
+  value,
+  onChange,
   defaultValue,
   type = "text",
   icon,
   helper,
-  className = ""
+  className = "",
+  readOnly = false
 }: {
   label: string;
   placeholder?: string;
+  value?: string;
+  onChange?: (value: string) => void;
   defaultValue?: string;
   type?: string;
   icon?: React.ReactNode;
   helper?: string;
   className?: string;
+  readOnly?: boolean;
 }) {
   return (
     <label className={`block ${className}`}>
@@ -305,9 +421,12 @@ function ProfileField({
         {icon ? <span className="shrink-0">{icon}</span> : null}
         <input
           type={type}
+          value={value}
           defaultValue={defaultValue}
+          readOnly={readOnly}
+          onChange={onChange ? (event) => onChange(event.target.value) : undefined}
           placeholder={placeholder}
-          className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-graphite/38"
+          className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-graphite/38 read-only:text-graphite/60"
         />
       </span>
       {helper ? (

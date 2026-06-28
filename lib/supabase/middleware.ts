@@ -66,7 +66,7 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && isProtected) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = "/";
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
   }

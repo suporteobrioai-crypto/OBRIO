@@ -82,8 +82,8 @@ export default function ClimaPage() {
               </button>
             </div>
             <div className="mt-4 rounded-[8px] bg-white p-4 text-sm font-semibold leading-6 text-graphite/70">
-              Amanhã às 8h: "Bom dia. Previsão para Casa Vila Mariana: 24°C,
-              chuva 20%, vento moderado. Condições boas para alvenaria."
+              Amanhã às 8h: &ldquo;Bom dia. Previsão para Casa Vila Mariana: 24°C,
+              chuva 20%, vento moderado. Condições boas para alvenaria.&rdquo;
             </div>
           </Card>
 

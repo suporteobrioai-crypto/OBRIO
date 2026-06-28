@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CalendarDays,
   FileText,
@@ -11,73 +11,12 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card, Metric } from "@/components/Ui";
+import { useMateriais } from "@/hooks/useMateriais";
+import { useObraAtiva } from "@/hooks/useObraAtiva";
+import { useObras } from "@/hooks/useObras";
+import { formatCents } from "@/lib/format";
 
 const periods = ["Hoje", "7 dias", "30 dias", "Personalizado"] as const;
-
-const mostPurchased = [
-  { label: "Cimento", value: 32 },
-  { label: "Areia", value: 21 },
-  { label: "Vergalhão", value: 17 },
-  { label: "Brita", value: 10 }
-];
-
-const categoryCosts = [
-  { label: "Materiais", value: 65 },
-  { label: "Ferramentas", value: 15 },
-  { label: "Locações", value: 10 },
-  { label: "Outros", value: 10 }
-];
-
-const purchases = [
-  {
-    date: "Hoje",
-    name: "30 sacos de cimento",
-    supplier: "Depósito Central",
-    value: "R$ 1.200"
-  },
-  {
-    date: "Ontem",
-    name: "Areia média",
-    supplier: "Areial Norte",
-    value: "R$ 850"
-  },
-  {
-    date: "05/06",
-    name: "Vergalhão 10mm",
-    supplier: "Aço Forte",
-    value: "R$ 2.600"
-  }
-];
-
-const warranties = [
-  { name: "Furadeira Bosch", expiration: "Vence em 18 dias", tone: "urgent" },
-  { name: "Serra Mármore", expiration: "Vence em 42 dias", tone: "warning" },
-  { name: "Betoneira 400L", expiration: "Vence em 67 dias", tone: "ok" }
-];
-
-const materials = [
-  {
-    name: "Cimento CP II",
-    quantity: "320 sacos",
-    supplier: "Depósito Central",
-    value: "R$ 12.800",
-    source: "Notas fiscais"
-  },
-  {
-    name: "Areia média",
-    quantity: "28 m³",
-    supplier: "Areial Norte",
-    value: "R$ 4.760",
-    source: "Fotos e notas"
-  },
-  {
-    name: "Vergalhão 10mm",
-    quantity: "140 barras",
-    supplier: "Aço Forte",
-    value: "R$ 9.100",
-    source: "PDF"
-  }
-];
 
 export default function MateriaisPage() {
   const [period, setPeriod] = useState<(typeof periods)[number]>("30 dias");
@@ -85,11 +24,83 @@ export default function MateriaisPage() {
   const [endDate, setEndDate] = useState("");
   const [appliedCustomPeriod, setAppliedCustomPeriod] = useState("");
   const [materialSearch, setMaterialSearch] = useState("");
-  const filteredMaterials = materials.filter((item) => {
+  const { shellProjects } = useObras();
+  const { activeProject } = useObraAtiva(shellProjects);
+  const { compras, materiais, loading, error } = useMateriais(
+    activeProject?.id ?? null
+  );
+
+  const totalSpentCents = useMemo(
+    () => compras.reduce((sum, item) => sum + item.totalCents, 0),
+    [compras]
+  );
+
+  const nfCount = useMemo(
+    () => compras.filter((item) => item.nfPath).length,
+    [compras]
+  );
+
+  const warranties = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return materiais
+      .filter((item) => item.warrantyUntil !== "—")
+      .map((item) => {
+        const [day, month, year] = item.warrantyUntil.split("/");
+        const expiry = new Date(Number(year), Number(month) - 1, Number(day));
+        const daysLeft = Math.ceil(
+          (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        let tone: "urgent" | "warning" | "ok" = "ok";
+        if (daysLeft <= 30) tone = "urgent";
+        else if (daysLeft <= 60) tone = "warning";
+        return {
+          name: item.name,
+          expiration:
+            daysLeft < 0
+              ? "Vencida"
+              : daysLeft === 0
+                ? "Vence hoje"
+                : `Vence em ${daysLeft} dias`,
+          tone
+        };
+      })
+      .slice(0, 5);
+  }, [materiais]);
+
+  const mostPurchased = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of materiais) {
+      counts.set(item.name, (counts.get(item.name) ?? 0) + 1);
+    }
+    const max = Math.max(1, ...Array.from(counts.values()));
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([label, value]) => ({
+        label,
+        value: Math.round((value / max) * 100)
+      }));
+  }, [materiais]);
+
+  const categoryCosts = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const item of materiais) {
+      totals.set(item.category, (totals.get(item.category) ?? 0) + 1);
+    }
+    const sum = Array.from(totals.values()).reduce((acc, value) => acc + value, 0) || 1;
+    return Array.from(totals.entries())
+      .slice(0, 4)
+      .map(([label, value]) => ({
+        label,
+        value: Math.round((value / sum) * 100)
+      }));
+  }, [materiais]);
+
+  const filteredMaterials = materiais.filter((item) => {
     const query = materialSearch.trim().toLocaleLowerCase("pt-BR");
     if (!query) return true;
-
-    return [item.name, item.supplier].some((value) =>
+    return [item.name, item.category].some((value) =>
       value.toLocaleLowerCase("pt-BR").includes(query)
     );
   });
@@ -136,11 +147,41 @@ export default function MateriaisPage() {
       subtitle="Consulte gastos, materiais, documentos e garantias organizados pelo Obrio AI."
     >
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Total gasto" value="R$ 398.000" helper="Todas as compras" />
-        <Metric label="Materiais registrados" value="1.248" helper="Itens identificados" />
-        <Metric label="Notas fiscais" value="386" helper="Documentos organizados" />
-        <Metric label="Garantias ativas" value="72" helper="Produtos e equipamentos" />
+        <Metric
+          label="Total gasto"
+          value={formatCents(totalSpentCents)}
+          helper="Compras da obra ativa"
+        />
+        <Metric
+          label="Materiais registrados"
+          value={String(materiais.length)}
+          helper="Itens identificados"
+        />
+        <Metric
+          label="Notas fiscais"
+          value={String(nfCount)}
+          helper="Documentos organizados"
+        />
+        <Metric
+          label="Garantias ativas"
+          value={String(warranties.length)}
+          helper="Produtos e equipamentos"
+        />
       </section>
+
+      {error ? (
+        <div className="mt-4 rounded-[8px] bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {!activeProject ? (
+        <Card className="mt-4">
+          <p className="font-semibold text-graphite/70">
+            Selecione uma obra para ver compras e materiais.
+          </p>
+        </Card>
+      ) : null}
 
       <section className="mt-4">
         <Card>
@@ -239,19 +280,29 @@ export default function MateriaisPage() {
             <h2 className="text-xl font-black text-foundation">Últimas compras</h2>
           </div>
           <div className="mt-4 grid gap-2">
-            {purchases.map((purchase) => (
+            {loading ? (
+              <p className="text-sm font-semibold text-graphite/60">Carregando compras…</p>
+            ) : null}
+            {!loading && !compras.length ? (
+              <p className="text-sm font-semibold text-graphite/60">
+                Nenhuma compra registrada.
+              </p>
+            ) : null}
+            {compras.slice(0, 5).map((purchase) => (
               <div
-                key={`${purchase.date}-${purchase.name}`}
+                key={purchase.id}
                 className="grid gap-2 rounded-[8px] bg-concrete p-3 sm:grid-cols-[90px_1fr_auto] sm:items-center"
               >
                 <p className="text-xs font-black uppercase text-build">{purchase.date}</p>
                 <div>
-                  <p className="text-sm font-black text-foundation">{purchase.name}</p>
-                  <p className="mt-1 text-xs font-semibold text-graphite/55">
+                  <p className="text-sm font-black text-foundation">
                     {purchase.supplier}
                   </p>
+                  <p className="mt-1 text-xs font-semibold text-graphite/55">
+                    {purchase.notes ?? "Compra registrada"}
+                  </p>
                 </div>
-                <strong className="text-sm text-foundation">{purchase.value}</strong>
+                <strong className="text-sm text-foundation">{purchase.total}</strong>
               </div>
             ))}
           </div>
@@ -265,6 +316,11 @@ export default function MateriaisPage() {
             </h2>
           </div>
           <div className="mt-4 grid gap-2">
+            {!warranties.length ? (
+              <p className="text-sm font-semibold text-graphite/60">
+                Nenhuma garantia próxima do vencimento.
+              </p>
+            ) : null}
             {warranties.map((warranty) => (
               <div key={warranty.name} className="rounded-[8px] bg-concrete p-3">
                 <p className="text-sm font-black text-foundation">{warranty.name}</p>
@@ -307,18 +363,18 @@ export default function MateriaisPage() {
           </label>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filteredMaterials.map((item) => (
-              <div key={item.name} className="rounded-[8px] bg-concrete p-4">
+              <div key={item.id} className="rounded-[8px] bg-concrete p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="font-black text-foundation">{item.name}</h3>
                     <p className="mt-1 text-sm font-semibold text-graphite/60">
-                      {item.quantity} · {item.supplier}
+                      {item.qty} {item.unit} · {item.category}
                     </p>
                   </div>
-                  <strong className="shrink-0 text-sm text-foundation">{item.value}</strong>
+                  <strong className="shrink-0 text-sm text-foundation">{item.amount}</strong>
                 </div>
                 <span className="mt-3 inline-flex rounded-[8px] bg-white px-2 py-1 text-xs font-bold text-foundation">
-                  {item.source}
+                  Garantia: {item.warrantyUntil}
                 </span>
               </div>
             ))}

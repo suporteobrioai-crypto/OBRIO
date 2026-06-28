@@ -16,36 +16,12 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Card, Metric } from "@/components/Ui";
-
-type ReminderStatus = "today" | "tomorrow" | "future" | "overdue" | "completed";
-type ReminderPriority = "Alta" | "Média" | "Baixa";
-type ReminderChannel = "Aplicativo" | "WhatsApp" | "Aplicativo + WhatsApp";
-type ReminderGroup = "Hoje" | "Amanhã" | "Próximos 7 dias";
-
-type Reminder = {
-  id: number;
-  title: string;
-  time: string;
-  dateLabel: string;
-  countdown: string;
-  group: ReminderGroup;
-  status: ReminderStatus;
-  priority: ReminderPriority;
-  channel: ReminderChannel;
-};
+import { useLembretes } from "@/hooks/useLembretes";
+import { useObraAtiva } from "@/hooks/useObraAtiva";
+import { useObras } from "@/hooks/useObras";
+import type { ReminderView } from "@/lib/lembretes";
 
 const filters = ["Todos", "Hoje", "Semana", "Concluídos", "Pendentes", "Atrasados"] as const;
-
-const initialReminders: Reminder[] = [
-  { id: 1, title: "Conferir entrega da areia", time: "09:00", dateLabel: "Hoje", countdown: "Faltam 1h 18min", group: "Hoje", status: "today", priority: "Média", channel: "Aplicativo" },
-  { id: 2, title: "Pagar pedreiro João", time: "17:00", dateLabel: "Hoje", countdown: "Faltam 9h 18min", group: "Hoje", status: "today", priority: "Alta", channel: "Aplicativo + WhatsApp" },
-  { id: 3, title: "Revisar comprovante da Equipe Alfa", time: "11:30", dateLabel: "Ontem", countdown: "Atrasado há 20h", group: "Hoje", status: "overdue", priority: "Alta", channel: "WhatsApp" },
-  { id: 4, title: "Comprar cimento", time: "08:00", dateLabel: "Amanhã", countdown: "Vence em 1 dia", group: "Amanhã", status: "tomorrow", priority: "Média", channel: "Aplicativo + WhatsApp" },
-  { id: 5, title: "Ligar para o fornecedor de esquadrias", time: "14:00", dateLabel: "Amanhã", countdown: "Vence em 1 dia", group: "Amanhã", status: "tomorrow", priority: "Baixa", channel: "Aplicativo" },
-  { id: 6, title: "Receber material elétrico", time: "10:30", dateLabel: "15/06", countdown: "Vence em 5 dias", group: "Próximos 7 dias", status: "future", priority: "Média", channel: "Aplicativo + WhatsApp" },
-  { id: 7, title: "Vistoriar a laje", time: "16:00", dateLabel: "16/06", countdown: "Vence em 6 dias", group: "Próximos 7 dias", status: "future", priority: "Alta", channel: "Aplicativo" },
-  { id: 8, title: "Enviar relatório semanal", time: "18:00", dateLabel: "07/06", countdown: "Concluído há 2 dias", group: "Próximos 7 dias", status: "completed", priority: "Baixa", channel: "WhatsApp" }
-];
 
 const statusConfig = {
   today: { label: "Hoje", dot: "bg-amber-400", text: "text-amber-700", surface: "bg-amber-50" },
@@ -53,18 +29,31 @@ const statusConfig = {
   future: { label: "Futuro", dot: "bg-graphite/30", text: "text-graphite/55", surface: "bg-concrete" },
   overdue: { label: "Atrasado", dot: "bg-red-600", text: "text-red-700", surface: "bg-red-50" },
   completed: { label: "Concluído", dot: "bg-moss", text: "text-moss", surface: "bg-[#EAF4EF]" }
-} satisfies Record<ReminderStatus, { label: string; dot: string; text: string; surface: string }>;
+} satisfies Record<ReminderView["status"], { label: string; dot: string; text: string; surface: string }>;
 
 const priorityConfig = {
   Alta: "border-red-200 bg-red-50 text-red-700",
   Média: "border-amber-200 bg-amber-50 text-amber-700",
   Baixa: "border-black/5 bg-white text-graphite/55"
-} satisfies Record<ReminderPriority, string>;
+} satisfies Record<ReminderView["priority"], string>;
+
+type ReminderGroup = ReminderView["group"];
 
 export default function LembretesPage() {
+  const { shellProjects } = useObras();
+  const { activeProject } = useObraAtiva(shellProjects);
+  const {
+    reminders,
+    loading,
+    error,
+    completeReminder,
+    postponeReminder,
+    updateTitle,
+    deleteReminder
+  } = useLembretes(activeProject?.id ?? null);
+
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("Todos");
-  const [reminders, setReminders] = useState(initialReminders);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
 
   const filteredReminders = useMemo(
@@ -85,41 +74,39 @@ export default function LembretesPage() {
     today: reminders.filter((item) => item.status === "today").length,
     week: reminders.filter((item) => ["today", "tomorrow", "future"].includes(item.status)).length,
     overdue: reminders.filter((item) => item.status === "overdue").length,
-    completed: 18
+    completed: reminders.filter((item) => item.status === "completed").length
   };
 
-  function completeReminder(id: number) {
-    setReminders((items) =>
-      items.map((item) => item.id === id ? { ...item, status: "completed" as const } : item)
-    );
+  async function handleComplete(id: string) {
+    await completeReminder(id);
   }
 
-  function postponeReminder(id: number) {
-    setReminders((items) =>
-      items.map((item) =>
-        item.id === id
-          ? { ...item, group: "Amanhã" as const, dateLabel: "Amanhã", countdown: "Vence em 1 dia", status: "tomorrow" as const }
-          : item
-      )
-    );
+  async function handlePostpone(id: string) {
+    await postponeReminder(id);
   }
 
-  function startEditing(reminder: Reminder) {
+  function startEditing(reminder: ReminderView) {
     setEditingId(reminder.id);
     setEditingTitle(reminder.title);
   }
 
-  function saveEditing(id: number) {
+  async function saveEditing(id: string) {
     const title = editingTitle.trim();
-    if (title) {
-      setReminders((items) => items.map((item) => item.id === id ? { ...item, title } : item));
-    }
+    if (title) await updateTitle(id, title);
     setEditingId(null);
     setEditingTitle("");
   }
 
   return (
     <AppShell title="Lembretes" subtitle="O Obrio AI lembra você no aplicativo e no WhatsApp.">
+      {error ? (
+        <p className="mb-4 rounded-[8px] bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          {error}
+        </p>
+      ) : null}
+      {loading ? (
+        <p className="mb-4 text-sm font-semibold text-graphite/60">Carregando lembretes...</p>
+      ) : null}
       <section>
         <div className="mb-3 flex items-center gap-2">
           <Bell size={20} className="text-build" />
@@ -186,11 +173,11 @@ export default function LembretesPage() {
                         editing={editingId === reminder.id}
                         editingTitle={editingTitle}
                         onEditingTitle={setEditingTitle}
-                        onComplete={completeReminder}
-                        onPostpone={postponeReminder}
+                        onComplete={handleComplete}
+                        onPostpone={handlePostpone}
                         onEdit={startEditing}
                         onSave={saveEditing}
-                        onDelete={(id) => setReminders((items) => items.filter((item) => item.id !== id))}
+                        onDelete={(id) => void deleteReminder(id)}
                       />
                     ))}
                 </div>
@@ -214,11 +201,11 @@ export default function LembretesPage() {
                         editing={editingId === reminder.id}
                         editingTitle={editingTitle}
                         onEditingTitle={setEditingTitle}
-                        onComplete={completeReminder}
-                        onPostpone={postponeReminder}
+                        onComplete={handleComplete}
+                        onPostpone={handlePostpone}
                         onEdit={startEditing}
                         onSave={saveEditing}
-                        onDelete={(id) => setReminders((items) => items.filter((item) => item.id !== id))}
+                        onDelete={(id) => void deleteReminder(id)}
                       />
                     ))}
                   </div>
@@ -252,15 +239,15 @@ function ReminderCard({
   onSave,
   onDelete
 }: {
-  reminder: Reminder;
+  reminder: ReminderView;
   editing: boolean;
   editingTitle: string;
   onEditingTitle: (value: string) => void;
-  onComplete: (id: number) => void;
-  onPostpone: (id: number) => void;
-  onEdit: (reminder: Reminder) => void;
-  onSave: (id: number) => void;
-  onDelete: (id: number) => void;
+  onComplete: (id: string) => void;
+  onPostpone: (id: string) => void;
+  onEdit: (reminder: ReminderView) => void;
+  onSave: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const status = statusConfig[reminder.status];
 
@@ -323,7 +310,7 @@ function ReminderCard({
   );
 }
 
-function ChannelBadge({ channel }: { channel: ReminderChannel }) {
+function ChannelBadge({ channel }: { channel: ReminderView["channel"] }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
       {channel.includes("Aplicativo") ? (

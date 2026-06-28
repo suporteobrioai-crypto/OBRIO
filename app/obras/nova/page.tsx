@@ -354,7 +354,12 @@ export default function NovaObraPage() {
               ? parseBudgetToCents(form.budgetTotal)
               : 0,
           delivery_date: form.doesNotKnowDelivery ? null : form.deliveryDate || null,
-          responsible: form.role
+          responsible: form.role,
+          property_type: form.propertyType || undefined,
+          area_sqm: form.doesNotKnowArea || !form.area
+            ? null
+            : Number.parseFloat(form.area.replace(/[^\d.,]/g, "").replace(",", ".")) || null,
+          goals: form.goals
         },
         user.id
       );

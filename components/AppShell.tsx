@@ -31,6 +31,12 @@ import {
 } from "lucide-react";
 import { ObrioMark } from "@/components/ObrioMark";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { useAuth } from "@/hooks/useAuth";
+import { useObraAtiva } from "@/hooks/useObraAtiva";
+import { useObras } from "@/hooks/useObras";
+import { useProfile } from "@/hooks/useProfile";
+import { useSubscription } from "@/hooks/useSubscription";
+import { getInitials, type ShellProject } from "@/lib/obras";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
@@ -110,116 +116,6 @@ const assistantPlaceholders = [
   "Ex: Gere um relatório para meu contador."
 ];
 
-type Project = {
-  id: string;
-  name: string;
-  status: string;
-  city: string;
-  state: string;
-  type: string;
-  propertyType: string;
-  area: string;
-  budget: string;
-  startDate: string;
-  deliveryDate: string;
-  address: string;
-  archived?: boolean;
-  manager?: {
-    name: string;
-    email: string;
-    phone: string;
-    role: string;
-    status: "Pendente" | "Ativo";
-  };
-};
-
-const planRules = {
-  name: "Premium",
-  limit: 10,
-  managerLimitPerProject: 1
-};
-
-const projects: Project[] = [
-  {
-    id: "casa-vila-mariana",
-    name: "Casa Vila Mariana",
-    status: "Em andamento",
-    city: "Vila Mariana",
-    state: "SP",
-    type: "Obra completa",
-    propertyType: "Residencial",
-    area: "128 m²",
-    budget: "R$ 180.000",
-    startDate: "01/06/2026",
-    deliveryDate: "22/08/2026",
-    address: "Rua Vergueiro, Vila Mariana",
-    manager: {
-      name: "João Pereira",
-      email: "joao@obra.com",
-      phone: "(11) 98888-1111",
-      role: "Mestre de obras",
-      status: "Ativo"
-    }
-  },
-  {
-    id: "reforma-loja-centro",
-    name: "Reforma Loja Centro",
-    status: "Pausada",
-    city: "Centro",
-    state: "SP",
-    type: "Reforma",
-    propertyType: "Comercial",
-    area: "84 m²",
-    budget: "R$ 65.000",
-    startDate: "12/05/2026",
-    deliveryDate: "30/07/2026",
-    address: "Rua Boa Vista, Centro"
-  },
-  {
-    id: "apartamento-santos",
-    name: "Apartamento Santos",
-    status: "Em andamento",
-    city: "Santos",
-    state: "SP",
-    type: "Reforma",
-    propertyType: "Residencial",
-    area: "72 m²",
-    budget: "R$ 92.000",
-    startDate: "20/05/2026",
-    deliveryDate: "18/08/2026",
-    address: "Avenida Ana Costa, Santos"
-  },
-  {
-    id: "condominio-riviera",
-    name: "Condomínio Riviera",
-    status: "Concluída",
-    city: "Bertioga",
-    state: "SP",
-    type: "Obra completa",
-    propertyType: "Residencial",
-    area: "240 m²",
-    budget: "R$ 410.000",
-    startDate: "15/01/2026",
-    deliveryDate: "30/05/2026",
-    address: "Riviera de São Lourenço"
-  },
-  {
-    id: "casa-arquivada",
-    name: "Casa Arquivada",
-    status: "Arquivada",
-    city: "Atibaia",
-    state: "SP",
-    type: "Reforma",
-    propertyType: "Residencial",
-    area: "110 m²",
-    budget: "R$ 120.000",
-    startDate: "10/01/2025",
-    deliveryDate: "20/04/2025",
-    address: "Centro, Atibaia",
-    archived: true
-  }
-];
-
 export function AppShell({
   title,
   subtitle,
@@ -245,17 +141,23 @@ export function AppShell({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const [activeProjectId, setActiveProjectId] = useState(projects[0].id);
   const [projectActionsOpen, setProjectActionsOpen] = useState<string | null>(null);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [managerProject, setManagerProject] = useState<Project | null>(null);
+  const [managerProject, setManagerProject] = useState<ShellProject | null>(null);
   const [managerTab, setManagerTab] = useState<"dados" | "gerente" | "arquivo">("dados");
   const [archivedModalOpen, setArchivedModalOpen] = useState(false);
 
-  const activeProjects = projects.filter((project) => !project.archived);
-  const archivedProjects = projects.filter((project) => project.archived);
-  const activeProject =
-    projects.find((project) => project.id === activeProjectId) || activeProjects[0];
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const { limits } = useSubscription();
+  const { shellProjects } = useObras();
+  const { activeProject, setActive } = useObraAtiva(shellProjects);
+
+  const activeProjects = shellProjects.filter((project) => !project.archived);
+  const archivedProjects = shellProjects.filter((project) => project.archived);
+  const displayName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "Usuário";
+  const userInitials = getInitials(displayName, user?.email);
+  const planLabel = limits.label;
   const showObrioInput = [
     "/dashboard",
     "/diario",
@@ -275,13 +177,6 @@ export function AppShell({
     "/relatorios",
     "/assistente"
   ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
-  useEffect(() => {
-    const savedProjectId = window.localStorage.getItem("obrio-active-project");
-    if (savedProjectId && projects.some((project) => project.id === savedProjectId)) {
-      setActiveProjectId(savedProjectId);
-    }
-  }, []);
-
   useEffect(() => {
     if (pathname !== "/materiais") return;
 
@@ -318,12 +213,10 @@ export function AppShell({
     return () => window.clearInterval(interval);
   }, [pathname]);
 
-  function selectProject(project: Project) {
-    setActiveProjectId(project.id);
+  function selectProject(project: ShellProject) {
+    setActive(project);
     setProjectMenuOpen(false);
     setProjectActionsOpen(null);
-    window.localStorage.setItem("obrio-active-project", project.id);
-    window.dispatchEvent(new CustomEvent("obrio:project-change", { detail: project }));
   }
 
   function sendAssistantMessage(message = assistantMessage) {
@@ -334,7 +227,7 @@ export function AppShell({
   }
 
   function handleNewProject() {
-    if (activeProjects.length >= planRules.limit) {
+    if (activeProjects.length >= limits.obraLimit) {
       setUpgradeModalOpen(true);
       setProjectMenuOpen(false);
       return;
@@ -343,7 +236,7 @@ export function AppShell({
     window.location.href = "/obras/nova";
   }
 
-  function openManageProject(project: Project) {
+  function openManageProject(project: ShellProject) {
     setManagerProject(project);
     setManagerTab("dados");
     setProjectActionsOpen(null);
@@ -370,13 +263,13 @@ export function AppShell({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-black text-foundation">
-            {activeProject.name}
+            {activeProject?.name ?? "Nenhuma obra"}
           </span>
           <span className="block text-xs font-bold text-graphite/55">
-            {activeProject.status}
+            {activeProject?.displayStatus ?? "—"}
           </span>
           <span className="block truncate text-xs font-bold text-graphite/55">
-            {activeProject.city} - {activeProject.state}
+            {activeProject ? `${activeProject.city} - ${activeProject.state}` : "—"}
           </span>
         </span>
         <ChevronDown
@@ -410,10 +303,10 @@ export function AppShell({
                   {project.name}
                 </span>
                 <span className="mt-1 block truncate text-xs font-bold text-graphite/55">
-                  {project.status} · {project.city} - {project.state}
+                  {project.displayStatus} · {project.city} - {project.state}
                 </span>
               </span>
-              {project.id === activeProject.id ? (
+              {activeProject && project.id === activeProject.id ? (
                 <span className="text-center text-lg font-black text-build">✓</span>
               ) : null}
             </button>
@@ -507,14 +400,14 @@ export function AppShell({
               aria-expanded={userMenuOpen}
             >
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-foundation text-sm font-black text-white">
-                OM
+                {userInitials}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-black text-foundation">
-                  Orlando Montes
+                  {displayName}
                 </span>
                 <span className="block text-xs font-bold text-graphite/55">
-                  Plano Premium
+                  Plano {planLabel}
                 </span>
               </span>
               <ChevronDown
@@ -636,14 +529,14 @@ export function AppShell({
                         aria-expanded={userMenuOpen}
                       >
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foundation text-[10px] font-black text-white">
-                          OM
+                          {userInitials}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs font-black text-foundation sm:text-sm">
-                            Orlando Montes
+                            {displayName}
                           </span>
                           <span className="block truncate text-[10px] font-semibold text-graphite/55 sm:text-xs">
-                            Plano Premium
+                            Plano {planLabel}
                           </span>
                         </span>
                         <ChevronDown
@@ -1068,7 +961,7 @@ export function AppShell({
           <div className="w-full max-w-md rounded-[8px] bg-white p-5 shadow-soft">
             <h2 className="text-xl font-black text-foundation">Limite de obras atingido</h2>
             <p className="mt-2 text-sm font-semibold leading-6 text-graphite/65">
-              Seu plano atual permite até {planRules.limit} obra(s). Faça upgrade
+              Seu plano atual permite até {limits.obraLimit} obra(s). Faça upgrade
               para cadastrar mais obras.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1175,7 +1068,7 @@ export function AppShell({
                   ["Nome da obra", managerProject.name],
                   ["Tipo de projeto", managerProject.type],
                   ["Tipo de imóvel", managerProject.propertyType],
-                  ["Status", managerProject.status],
+                  ["Status", managerProject.displayStatus],
                   ["Cidade", managerProject.city],
                   ["Estado", managerProject.state],
                   ["Endereço", managerProject.address],
@@ -1208,24 +1101,21 @@ export function AppShell({
 
             {managerTab === "gerente" ? (
               <div className="mt-5 grid gap-4">
-                {managerProject.manager ? (
+                {managerProject.responsible ? (
                   <div className="rounded-[8px] bg-concrete p-4">
                     <h3 className="text-lg font-black text-foundation">
-                      {managerProject.manager.name}
+                      {managerProject.responsible}
                     </h3>
                     <p className="mt-1 text-sm font-bold text-graphite/60">
-                      {managerProject.manager.email} · {managerProject.manager.phone}
-                    </p>
-                    <p className="mt-1 text-sm font-bold text-graphite/60">
-                      {managerProject.manager.role} · Convite {managerProject.manager.status}
+                      Responsável registrado na obra
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <button className="h-10 rounded-[8px] bg-white px-3 text-sm font-black text-foundation">
-                        Reenviar convite
-                      </button>
-                      <button className="h-10 rounded-[8px] bg-white px-3 text-sm font-black text-red-600">
-                        Remover gerente
-                      </button>
+                      <Link
+                        href="/trocar-obra"
+                        className="inline-flex h-10 items-center rounded-[8px] bg-white px-3 text-sm font-black text-foundation"
+                      >
+                        Gerenciar responsáveis
+                      </Link>
                     </div>
                   </div>
                 ) : (
@@ -1350,12 +1240,14 @@ export function AppShell({
               >
                 Cancelar
               </button>
-              <Link
-                href="/login"
-                className="inline-flex h-12 items-center justify-center rounded-[8px] bg-foundation text-sm font-black text-white"
-              >
-                Sair
-              </Link>
+              <form action="/auth/signout" method="post" className="contents">
+                <button
+                  type="submit"
+                  className="inline-flex h-12 w-full items-center justify-center rounded-[8px] bg-foundation text-sm font-black text-white"
+                >
+                  Sair
+                </button>
+              </form>
             </div>
           </div>
         </div>

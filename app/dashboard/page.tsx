@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
-  Camera,
   CheckCircle2,
   CloudRain,
   FileText,
@@ -13,80 +12,20 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card, Metric } from "@/components/Ui";
-
-const projectDashboards = [
-  {
-    id: "casa-vila-mariana",
-    name: "Casa Vila Mariana",
-    status: "Em andamento",
-    detail: "128 m² · Residencial · São Paulo/SP",
-    progress: 41,
-    stats: [
-      { label: "Orçamento previsto", value: "R$ 180k", helper: "Compras + equipe" },
-      { label: "Valor gasto", value: "R$ 74k", helper: "41% consumido" },
-      { label: "Saldo restante", value: "R$ 106k", helper: "Dentro do previsto" },
-      { label: "Dias restantes", value: "48", helper: "Entrega em 22/08/2026" }
-    ]
-  },
-  {
-    id: "reforma-loja-centro",
-    name: "Reforma Loja Centro",
-    status: "Pausada",
-    detail: "84 m² · Comercial · São Paulo/SP",
-    progress: 28,
-    stats: [
-      { label: "Orçamento previsto", value: "R$ 65k", helper: "Compras + equipe" },
-      { label: "Valor gasto", value: "R$ 18k", helper: "28% consumido" },
-      { label: "Saldo restante", value: "R$ 47k", helper: "Dentro do previsto" },
-      { label: "Dias restantes", value: "21", helper: "Entrega em 30/07/2026" }
-    ]
-  },
-  {
-    id: "apartamento-santos",
-    name: "Apartamento Santos",
-    status: "Em andamento",
-    detail: "72 m² · Residencial · Santos/SP",
-    progress: 34,
-    stats: [
-      { label: "Orçamento previsto", value: "R$ 92k", helper: "Compras + equipe" },
-      { label: "Valor gasto", value: "R$ 31k", helper: "34% consumido" },
-      { label: "Saldo restante", value: "R$ 61k", helper: "Dentro do previsto" },
-      { label: "Dias restantes", value: "40", helper: "Entrega em 18/08/2026" }
-    ]
-  },
-  {
-    id: "condominio-riviera",
-    name: "Condomínio Riviera",
-    status: "Concluída",
-    detail: "240 m² · Residencial · Bertioga/SP",
-    progress: 100,
-    stats: [
-      { label: "Orçamento previsto", value: "R$ 410k", helper: "Compras + equipe" },
-      { label: "Valor gasto", value: "R$ 398k", helper: "97% consumido" },
-      { label: "Saldo restante", value: "R$ 12k", helper: "Finalizada abaixo do orçamento" },
-      { label: "Dias restantes", value: "0", helper: "Entregue em 30/05/2026" }
-    ]
-  }
-];
-
-const todayItems = [
-  { icon: Bell, label: "Lembretes pendentes", value: "2", text: "Comprar cimento às 8h" },
-  { icon: WalletCards, label: "Pagamentos previstos", value: "1", text: "Pagar pedreiro João" },
-  { icon: PackageCheck, label: "Compras programadas", value: "3", text: "Receber areia à tarde" },
-  { icon: CloudRain, label: "Alertas climáticos", value: "1", text: "Evite pintura externa" }
-];
+import { useLembretes } from "@/hooks/useLembretes";
+import { useDiario } from "@/hooks/useDiario";
+import { useMateriais } from "@/hooks/useMateriais";
+import { useObraAtiva } from "@/hooks/useObraAtiva";
+import { useObras } from "@/hooks/useObras";
+import { usePagamentos } from "@/hooks/usePagamentos";
+import { formatCents } from "@/lib/format";
+import { ACTIVE_PROJECT_STORAGE_KEY } from "@/lib/obras";
 
 const progressByMonth = [
   { label: "Jan", value: 10 },
   { label: "Fev", value: 22 },
   { label: "Mar", value: 35 },
   { label: "Abr", value: 41 }
-];
-
-const costsByCategory = [
-  { label: "Compras", value: 46, amount: "R$ 34k" },
-  { label: "Equipe", value: 42, amount: "R$ 31k" },
-  { label: "Extras", value: 12, amount: "R$ 9k" }
 ];
 
 const forecast = [
@@ -99,29 +38,171 @@ const forecast = [
   { day: "Ter", condition: "Sol", temperature: "27°", rain: "10%", favorable: true }
 ];
 
-const registeredToday = [
-  { text: "3 compras registradas", tone: "ok" },
-  { text: "2 pagamentos registrados", tone: "ok" },
-  { text: "12 fotos adicionadas", tone: "ok" },
-  { text: "1 pendência aberta", tone: "warning" },
-  { text: "4 lembretes futuros", tone: "reminder" }
-];
-
-const timeline = [
-  { type: "Diário", time: "Hoje, 16:20", text: "Laje concluída" },
-  { type: "Compras", time: "Hoje, 14:10", text: "30 sacos de cimento registrados" },
-  { type: "Pagamentos", time: "Ontem, 17:00", text: "Pagamento do pedreiro João confirmado" },
-  { type: "Fotos", time: "Ontem, 11:30", text: "12 fotos adicionadas ao diário" },
-  { type: "Lembretes", time: "Segunda, 08:00", text: "Comprar cimento marcado como pendente" }
-];
-
 export default function DashboardPage() {
-  const [projectId, setProjectId] = useState("casa-vila-mariana");
-  const currentProject =
-    projectDashboards.find((project) => project.id === projectId) || projectDashboards[0];
+  const { shellProjects, obras } = useObras();
+  const { activeProject } = useObraAtiva(shellProjects);
+  const { reminders } = useLembretes(activeProject?.id ?? null);
+  const { compras } = useMateriais(activeProject?.id ?? null);
+  const { pagamentos } = usePagamentos(activeProject?.id ?? null);
+  const { entries: diarioEntries } = useDiario(activeProject?.id ?? null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+
+  const currentObra = useMemo(
+    () => obras.find((o) => o.id === (projectId ?? activeProject?.id)) ?? obras[0],
+    [obras, projectId, activeProject?.id]
+  );
+
+  const currentProject = useMemo(() => {
+    if (!currentObra) return null;
+    const remaining = Math.max(0, currentObra.budgetCents - currentObra.spentCents);
+    const pct =
+      currentObra.budgetCents > 0
+        ? Math.round((currentObra.spentCents / currentObra.budgetCents) * 100)
+        : 0;
+    return {
+      id: currentObra.id,
+      name: currentObra.name,
+      status: currentObra.status === "Ativa" ? "Em andamento" : currentObra.status,
+      detail: `${currentObra.city} · ${currentObra.state}`,
+      progress: currentObra.progress || pct,
+      stats: [
+        { label: "Orçamento previsto", value: currentObra.budget, helper: "Compras + equipe" },
+        { label: "Valor gasto", value: currentObra.spent, helper: `${pct}% consumido` },
+        {
+          label: "Saldo restante",
+          value: formatCents(remaining),
+          helper: remaining > 0 ? "Dentro do previsto" : "Orçamento esgotado"
+        },
+        {
+          label: "Dias restantes",
+          value: currentObra.daysLeft,
+          helper: `Entrega em ${currentObra.deliveryDate}`
+        }
+      ]
+    };
+  }, [currentObra]);
+
+  const materiaisTotalCents = useMemo(
+    () => compras.reduce((sum, item) => sum + item.totalCents, 0),
+    [compras]
+  );
+
+  const equipeTotalCents = useMemo(
+    () =>
+      pagamentos
+        .filter((item) => item.status === "pago")
+        .reduce((sum, item) => sum + item.amountCents, 0),
+    [pagamentos]
+  );
+
+  const costsByCategory = useMemo(() => {
+    const total = materiaisTotalCents + equipeTotalCents || 1;
+    return [
+      {
+        label: "Compras",
+        value: Math.round((materiaisTotalCents / total) * 100),
+        amount: formatCents(materiaisTotalCents)
+      },
+      {
+        label: "Equipe",
+        value: Math.round((equipeTotalCents / total) * 100),
+        amount: formatCents(equipeTotalCents)
+      }
+    ].filter((item) => item.value > 0);
+  }, [materiaisTotalCents, equipeTotalCents]);
+
+  const pendingPayments = useMemo(
+    () => pagamentos.filter((item) => item.status !== "pago").length,
+    [pagamentos]
+  );
+
+  const registeredToday = useMemo(() => {
+    const pendingReminders = reminders.filter((r) => r.status !== "completed").length;
+    const items: { text: string; tone: "ok" | "warning" | "reminder" }[] = [
+      {
+        text: `${compras.length} compra(s) registrada(s)`,
+        tone: compras.length ? "ok" : "warning"
+      },
+      {
+        text: `${pagamentos.length} pagamento(s) registrado(s)`,
+        tone: pagamentos.length ? "ok" : "warning"
+      },
+      {
+        text: `${diarioEntries.length} registro(s) no diário`,
+        tone: diarioEntries.length ? "ok" : "warning"
+      }
+    ];
+    if (pendingPayments > 0) {
+      items.push({
+        text: `${pendingPayments} pagamento(s) pendente(s)`,
+        tone: "warning"
+      });
+    }
+    if (pendingReminders > 0) {
+      items.push({
+        text: `${pendingReminders} lembrete(s) futuro(s)`,
+        tone: "reminder"
+      });
+    }
+    return items;
+  }, [compras.length, pagamentos.length, diarioEntries.length, pendingPayments, reminders]);
+
+  const timeline = useMemo(() => {
+    const items = [
+      ...compras.slice(0, 2).map((item) => ({
+        type: "Compras",
+        time: item.date,
+        text: `Compra em ${item.supplier} — ${item.total}`
+      })),
+      ...pagamentos.slice(0, 2).map((item) => ({
+        type: "Pagamentos",
+        time: item.date,
+        text: `${item.prestadorName} — ${item.amount}`
+      })),
+      ...diarioEntries.slice(0, 2).map((item) => ({
+        type: "Diário",
+        time: item.date,
+        text: item.content.slice(0, 80)
+      })),
+      ...reminders.slice(0, 2).map((item) => ({
+        type: "Lembretes",
+        time: item.dateLabel,
+        text: item.title
+      }))
+    ];
+    return items.slice(0, 5);
+  }, [compras, pagamentos, diarioEntries, reminders]);
+
+  const todayItems = useMemo(
+    () => [
+      {
+        icon: Bell,
+        label: "Lembretes pendentes",
+        value: String(reminders.filter((r) => r.status !== "completed").length),
+        text: reminders.find((r) => r.status === "today")?.title ?? "Nenhum para hoje"
+      },
+      {
+        icon: WalletCards,
+        label: "Pagamentos pendentes",
+        value: String(pendingPayments),
+        text:
+          pendingPayments > 0
+            ? `${pendingPayments} aguardando confirmação`
+            : "Nenhum pendente"
+      },
+      {
+        icon: PackageCheck,
+        label: "Compras registradas",
+        value: String(compras.length),
+        text: compras[0]?.supplier ?? "Consulte materiais"
+      },
+      { icon: CloudRain, label: "Alertas climáticos", value: "1", text: "Evite pintura externa" }
+    ],
+    [reminders, pendingPayments, compras]
+  );
 
   useEffect(() => {
-    const savedProjectId = window.localStorage.getItem("obrio-active-project");
+    const savedProjectId = window.localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY);
     if (savedProjectId) setProjectId(savedProjectId);
 
     function handleProjectChange(event: Event) {
@@ -132,6 +213,18 @@ export default function DashboardPage() {
     window.addEventListener("obrio:project-change", handleProjectChange);
     return () => window.removeEventListener("obrio:project-change", handleProjectChange);
   }, []);
+
+  if (!currentProject) {
+    return (
+      <AppShell title="Dashboard da obra" subtitle="Crie uma obra para começar.">
+        <Card>
+          <p className="font-semibold text-graphite/70">
+            Nenhuma obra cadastrada. Acesse Obras → Nova Obra.
+          </p>
+        </Card>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell
@@ -216,6 +309,11 @@ export default function DashboardPage() {
           <Card>
             <h3 className="font-black text-foundation">Gastos por categoria</h3>
             <div className="mt-5 grid gap-5">
+              {!costsByCategory.length ? (
+                <p className="text-sm font-semibold text-graphite/60">
+                  Sem gastos registrados nesta obra.
+                </p>
+              ) : null}
               {costsByCategory.map((item) => (
                 <VisualBar
                   key={item.label}
@@ -230,9 +328,50 @@ export default function DashboardPage() {
           <Card>
             <h3 className="font-black text-foundation">Orçamento x gasto</h3>
             <div className="mt-5 grid gap-5">
-              <BudgetBar label="Orçamento" value="R$ 180k" width={100} color="bg-foundation" />
-              <BudgetBar label="Gasto" value="R$ 74k" width={41} color="bg-build" />
-              <BudgetBar label="Saldo" value="R$ 106k" width={59} color="bg-moss" />
+              {currentObra ? (
+                <>
+                  <BudgetBar
+                    label="Orçamento"
+                    value={currentObra.budget}
+                    width={100}
+                    color="bg-foundation"
+                  />
+                  <BudgetBar
+                    label="Gasto"
+                    value={currentObra.spent}
+                    width={
+                      currentObra.budgetCents > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              (currentObra.spentCents / currentObra.budgetCents) * 100
+                            )
+                          )
+                        : 0
+                    }
+                    color="bg-build"
+                  />
+                  <BudgetBar
+                    label="Saldo"
+                    value={formatCents(
+                      Math.max(0, currentObra.budgetCents - currentObra.spentCents)
+                    )}
+                    width={
+                      currentObra.budgetCents > 0
+                        ? Math.max(
+                            0,
+                            Math.round(
+                              ((currentObra.budgetCents - currentObra.spentCents) /
+                                currentObra.budgetCents) *
+                                100
+                            )
+                          )
+                        : 0
+                    }
+                    color="bg-moss"
+                  />
+                </>
+              ) : null}
             </div>
           </Card>
         </div>
@@ -309,6 +448,11 @@ export default function DashboardPage() {
             <FileText size={21} className="shrink-0 text-build" />
           </div>
           <div className="mt-4 grid gap-2">
+            {!timeline.length ? (
+              <p className="text-sm font-semibold text-graphite/60">
+                Nenhuma atividade recente nesta obra.
+              </p>
+            ) : null}
             {timeline.map((item) => (
               <div
                 key={`${item.time}-${item.text}`}

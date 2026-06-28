@@ -1,44 +1,78 @@
 # Obrio AI
 
-MVP de gestão de obras e reformas — Next.js 14, Supabase e Cloudflare Workers (OpenNext).
+MVP de gestão de obras e reformas com assistente inteligente — mercado brasileiro.
 
 ## Stack
 
-- **Frontend:** Next.js 14 (App Router), React, Tailwind CSS
-- **Auth & DB:** Supabase (`kvofxprsmzyxssjpyfmy`)
-- **Deploy:** Cloudflare Workers via `@opennextjs/cloudflare`
-- **Repositório:** [suporteobrioai-crypto/OBRIO](https://github.com/suporteobrioai-crypto/OBRIO)
+| Camada | Tecnologia |
+|--------|------------|
+| Frontend | Next.js 15 (App Router), React 18, TypeScript |
+| Estilo | Tailwind CSS 3, lucide-react |
+| Backend | Supabase (Auth, Postgres, Storage, RLS) |
+| Deploy | Cloudflare Workers + OpenNext |
+
+## Estado do projeto
+
+| Área | Status |
+|------|--------|
+| UI (20 rotas) | Implementado |
+| Supabase (Auth, DB, hooks) | Integrado |
+| Auth / middleware | Login em `/`, proteção de rotas, signout |
+| Testes unitários | Vitest (`npm test`) |
+| Testes E2E | Playwright (`npm run test:e2e`) |
+| CI/CD | GitHub Actions (lint, test, build, deploy) |
+| Produção | [obrioai.app](https://obrioai.app) |
 
 ## Setup local
 
-Guia completo de contas: [docs/SETUP_ACCOUNTS.md](docs/SETUP_ACCOUNTS.md)
-
-1. Copie `.env.example` para `.env.local` e preencha as chaves do Supabase.
-2. Aplique a migration em `supabase/migrations/001_obrio_core.sql` (SQL Editor ou `supabase db push`).
-3. Instale dependências e rode o dev server:
-
 ```bash
 npm install
+cp .env.example .env.local   # NEXT_PUBLIC_SUPABASE_URL + ANON_KEY
 npm run dev
 ```
+
+Abra [http://localhost:3000](http://localhost:3000) — a raiz é a tela de login.
 
 ## Scripts
 
 | Comando | Descrição |
 |---------|-----------|
 | `npm run dev` | Desenvolvimento local |
-| `npm run build` | Build Next.js |
-| `npm run preview` | Preview no runtime Workers |
-| `npm run deploy` | Build e deploy na Cloudflare |
+| `npm run build` | Build de produção |
+| `npm run start` | Servidor após build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest (unit) |
+| `npm run test:e2e` | Playwright (requer credenciais E2E) |
+| `npm run deploy` | Build OpenNext + deploy Cloudflare |
 
-## Contas
+## Documentação
 
-- GitHub: `suporteobrioai-crypto/OBRIO`
-- Cloudflare account: `3993b788758518b8ed046b055577f49d`
-- Supabase: `https://kvofxprsmzyxssjpyfmy.supabase.co`
+Documentação completa em **[docs/](./docs/README.md)**:
 
-## CI/CD (Cloudflare Workers Builds)
+- [Produto](./docs/PRODUCT.md) · [Arquitetura](./docs/ARCHITECTURE.md) · [Rotas](./docs/ROUTES.md)
+- [Design System](./docs/DESIGN-SYSTEM.md) · [Modelo de Dados](./docs/DATA-MODEL.md)
+- [Desenvolvimento](./docs/DEVELOPMENT.md) · [Integrações](./docs/INTEGRATIONS.md)
+- [Segurança](./docs/SECURITY.md) · [Testes](./docs/TESTING.md) · [Deploy](./docs/DEPLOYMENT.md)
+- [Roadmap](./docs/ROADMAP.md)
 
-1. Dashboard Cloudflare → Workers & Pages → Connect to Git → `suporteobrioai-crypto/OBRIO`
-2. Build command: `npm run deploy`
-3. Variáveis de ambiente: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+## Cursor Agent Skills
+
+Skills do projeto em `.cursor/skills/` para guiar desenvolvimento com IA:
+
+- `obrio-conventions` — convenções de código
+- `obrio-ui` — design system e páginas
+- `obrio-supabase` — Auth, DB, RLS
+- `obrio-features` — domínio construção civil
+
+## Supabase
+
+1. Copie `.env.example` → `.env.local`
+2. Migrations `001`–`008` em `supabase/migrations/` (aplicadas no remoto via `supabase db push`)
+
+Projeto: `kvofxprsmzyxssjpyfmy` · Dashboard: [supabase.com/dashboard](https://supabase.com/dashboard/project/kvofxprsmzyxssjpyfmy/settings/api)
+
+## Repositório
+
+[github.com/suporteobrioai-crypto/OBRIO](https://github.com/suporteobrioai-crypto/OBRIO)
+
+Deploy: ver [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md).

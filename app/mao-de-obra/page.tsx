@@ -14,63 +14,13 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card, Metric } from "@/components/Ui";
+import { useObraAtiva } from "@/hooks/useObraAtiva";
+import { useObras } from "@/hooks/useObras";
+import { usePagamentos } from "@/hooks/usePagamentos";
+import { formatCents } from "@/lib/format";
 
 const periods = ["Hoje", "7 dias", "30 dias", "Personalizado"] as const;
 const sortOptions = ["Mais recentes", "Maior valor", "Menor valor", "Nome", "Função"];
-const roleOptions = ["Todos", "Pedreiro", "Eletricista", "Pintor", "Encanador", "Empreiteira"];
-
-const payments = [
-  { name: "João Silva", role: "Pedreiro", value: 800, date: "07/06/2026" },
-  { name: "Maria Souza", role: "Eletricista", value: 1500, date: "05/06/2026" },
-  { name: "Equipe Alfa", role: "Empreiteira", value: 6000, date: "01/06/2026" },
-  { name: "Carlos Mendes", role: "Pintor", value: 1200, date: "30/05/2026" }
-];
-
-const financialAlerts = [
-  { text: "João Silva vence sexta-feira", date: "13/06", tone: "urgent" },
-  { text: "Equipe Alfa aguardando confirmação", date: "Hoje", tone: "warning" },
-  { text: "Maria Souza: pagamento confirmado", date: "Hoje, 09:20", tone: "ok" },
-  { text: "2 comprovantes aguardando revisão", date: "Hoje", tone: "urgent" },
-  { text: "Pagamento de R$ 2.600 programado", date: "Amanhã", tone: "warning" }
-] as const;
-
-const upcomingPayments = [
-  { date: "Sexta-feira", name: "João Silva", role: "Pedreiro", value: "R$ 800" },
-  { date: "Sexta-feira", name: "Equipe Alfa", role: "Empreiteira", value: "R$ 2.500" },
-  { date: "12/06", name: "Maria Souza", role: "Eletricista", value: "R$ 1.500" }
-];
-
-const roleCosts = [
-  { label: "Pedreiro", value: 35 },
-  { label: "Eletricista", value: 22 },
-  { label: "Pintor", value: 18 },
-  { label: "Encanador", value: 15 },
-  { label: "Outros", value: 10 }
-];
-
-const recentHistory = [
-  {
-    date: "Hoje",
-    name: "João Silva",
-    role: "Pedreiro",
-    value: "R$ 800",
-    status: "Pagamento confirmado"
-  },
-  {
-    date: "Ontem",
-    name: "Maria Souza",
-    role: "Eletricista",
-    value: "R$ 1.600",
-    status: "Pagamento confirmado"
-  },
-  {
-    date: "05/06",
-    name: "Equipe Alfa",
-    role: "Empreiteira",
-    value: "R$ 6.000",
-    status: "Pagamento confirmado"
-  }
-];
 
 export default function MaoDeObraPage() {
   const [period, setPeriod] = useState<(typeof periods)[number]>("30 dias");
@@ -80,13 +30,36 @@ export default function MaoDeObraPage() {
   const [professionalSearch, setProfessionalSearch] = useState("");
   const [sortBy, setSortBy] = useState("Mais recentes");
   const [roleFilter, setRoleFilter] = useState("Todos");
+  const { shellProjects } = useObras();
+  const { activeProject } = useObraAtiva(shellProjects);
+  const { pagamentos, prestadores, loading, error } = usePagamentos(
+    activeProject?.id ?? null
+  );
+
+  const roleOptions = useMemo(() => {
+    const roles = new Set(prestadores.map((item) => item.role).filter(Boolean));
+    return ["Todos", ...Array.from(roles)];
+  }, [prestadores]);
+
+  const totalPaidCents = useMemo(
+    () =>
+      pagamentos
+        .filter((item) => item.status === "pago")
+        .reduce((sum, item) => sum + item.amountCents, 0),
+    [pagamentos]
+  );
+
+  const pendingCount = useMemo(
+    () => pagamentos.filter((item) => item.status === "pendente").length,
+    [pagamentos]
+  );
 
   const filteredPayments = useMemo(() => {
     const query = professionalSearch.trim().toLocaleLowerCase("pt-BR");
-    const result = payments.filter((payment) => {
+    const result = pagamentos.filter((payment) => {
       const matchesSearch =
         !query ||
-        [payment.name, payment.role].some((value) =>
+        [payment.prestadorName, payment.role].some((value) =>
           value.toLocaleLowerCase("pt-BR").includes(query)
         );
       const matchesRole = roleFilter === "Todos" || payment.role === roleFilter;
@@ -94,13 +67,83 @@ export default function MaoDeObraPage() {
     });
 
     return [...result].sort((a, b) => {
-      if (sortBy === "Maior valor") return b.value - a.value;
-      if (sortBy === "Menor valor") return a.value - b.value;
-      if (sortBy === "Nome") return a.name.localeCompare(b.name, "pt-BR");
+      if (sortBy === "Maior valor") return b.amountCents - a.amountCents;
+      if (sortBy === "Menor valor") return a.amountCents - b.amountCents;
+      if (sortBy === "Nome")
+        return a.prestadorName.localeCompare(b.prestadorName, "pt-BR");
       if (sortBy === "Função") return a.role.localeCompare(b.role, "pt-BR");
       return 0;
     });
-  }, [professionalSearch, roleFilter, sortBy]);
+  }, [professionalSearch, roleFilter, sortBy, pagamentos]);
+
+  const upcomingPayments = useMemo(
+    () =>
+      pagamentos
+        .filter((item) => item.status === "pendente")
+        .slice(0, 3)
+        .map((item) => ({
+          date: item.date,
+          name: item.prestadorName,
+          role: item.role,
+          value: item.amount
+        })),
+    [pagamentos]
+  );
+
+  const recentHistory = useMemo(
+    () =>
+      pagamentos
+        .filter((item) => item.status === "pago")
+        .slice(0, 3)
+        .map((item) => ({
+          date: item.date,
+          name: item.prestadorName,
+          role: item.role,
+          value: item.amount,
+          status: "Pagamento confirmado"
+        })),
+    [pagamentos]
+  );
+
+  const roleCosts = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const item of pagamentos) {
+      totals.set(item.role, (totals.get(item.role) ?? 0) + item.amountCents);
+    }
+    const sum = Array.from(totals.values()).reduce((acc, value) => acc + value, 0) || 1;
+    return Array.from(totals.entries())
+      .slice(0, 5)
+      .map(([label, cents]) => ({
+        label,
+        value: Math.round((cents / sum) * 100)
+      }));
+  }, [pagamentos]);
+
+  const financialAlerts = useMemo(() => {
+    const alerts: { text: string; date: string; tone: "urgent" | "warning" | "ok" }[] = [];
+    for (const item of pagamentos.filter((p) => p.status === "pendente").slice(0, 2)) {
+      alerts.push({
+        text: `${item.prestadorName} aguardando pagamento`,
+        date: item.date,
+        tone: "warning"
+      });
+    }
+    for (const item of pagamentos.filter((p) => p.status === "atrasado").slice(0, 2)) {
+      alerts.push({
+        text: `${item.prestadorName} com pagamento atrasado`,
+        date: item.date,
+        tone: "urgent"
+      });
+    }
+    if (!alerts.length) {
+      alerts.push({
+        text: "Nenhum alerta financeiro pendente",
+        date: "Hoje",
+        tone: "ok"
+      });
+    }
+    return alerts;
+  }, [pagamentos]);
 
   function selectPeriod(item: (typeof periods)[number]) {
     setPeriod(item);
@@ -144,11 +187,41 @@ export default function MaoDeObraPage() {
       subtitle="Consulte pagamentos, profissionais, recibos e histórico da equipe organizados pelo Obrio AI."
     >
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Total pago" value="R$ 128.000" helper="Pagamentos registrados" />
-        <Metric label="Profissionais" value="18" helper="Prestadores cadastrados" />
-        <Metric label="Pagamentos este mês" value="27" helper="Confirmados em junho" />
-        <Metric label="Pagamentos pendentes" value="4" helper="Aguardando pagamento" />
+        <Metric
+          label="Total pago"
+          value={formatCents(totalPaidCents)}
+          helper="Pagamentos confirmados"
+        />
+        <Metric
+          label="Profissionais"
+          value={String(prestadores.length)}
+          helper="Prestadores cadastrados"
+        />
+        <Metric
+          label="Pagamentos registrados"
+          value={String(pagamentos.length)}
+          helper="Na obra ativa"
+        />
+        <Metric
+          label="Pagamentos pendentes"
+          value={String(pendingCount)}
+          helper="Aguardando pagamento"
+        />
       </section>
+
+      {error ? (
+        <div className="mt-4 rounded-[8px] bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {!activeProject ? (
+        <Card className="mt-4">
+          <p className="font-semibold text-graphite/70">
+            Selecione uma obra para ver pagamentos da equipe.
+          </p>
+        </Card>
+      ) : null}
 
       <section className="mt-4">
         <Card>
@@ -235,17 +308,28 @@ export default function MaoDeObraPage() {
           </div>
 
           <div className="mt-4 grid gap-2">
+            {loading ? (
+              <p className="text-sm font-semibold text-graphite/60">Carregando pagamentos…</p>
+            ) : null}
+            {!loading && !filteredPayments.length ? (
+              <p className="text-sm font-semibold text-graphite/60">
+                Nenhum pagamento registrado.
+              </p>
+            ) : null}
             {filteredPayments.map((payment) => (
-              <div key={`${payment.name}-${payment.date}`} className="grid gap-2 rounded-[8px] bg-concrete p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div
+                key={payment.id}
+                className="grid gap-2 rounded-[8px] bg-concrete p-3 sm:grid-cols-[1fr_auto] sm:items-center"
+              >
                 <div>
-                  <p className="text-sm font-black text-foundation">{payment.name}</p>
+                  <p className="text-sm font-black text-foundation">
+                    {payment.prestadorName}
+                  </p>
                   <p className="mt-1 text-xs font-semibold text-graphite/55">
-                    {payment.role} · {payment.date}
+                    {payment.role} · {payment.date} · {payment.status}
                   </p>
                 </div>
-                <strong className="text-sm text-foundation">
-                  {payment.value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </strong>
+                <strong className="text-sm text-foundation">{payment.amount}</strong>
               </div>
             ))}
           </div>
@@ -292,6 +376,11 @@ export default function MaoDeObraPage() {
             <h2 className="text-xl font-black text-foundation">Próximos pagamentos</h2>
           </div>
           <div className="mt-4 grid gap-2">
+            {!upcomingPayments.length ? (
+              <p className="text-sm font-semibold text-graphite/60">
+                Nenhum pagamento pendente.
+              </p>
+            ) : null}
             {upcomingPayments.map((payment) => (
               <div key={`${payment.date}-${payment.name}`} className="grid gap-2 rounded-[8px] bg-concrete p-3 sm:grid-cols-[100px_1fr_auto] sm:items-center">
                 <p className="text-xs font-black uppercase text-build">{payment.date}</p>
@@ -311,6 +400,11 @@ export default function MaoDeObraPage() {
             <h2 className="text-xl font-black text-foundation">Gastos por função</h2>
           </div>
           <div className="mt-5 grid gap-4">
+            {!roleCosts.length ? (
+              <p className="text-sm font-semibold text-graphite/60">
+                Sem dados de gastos por função.
+              </p>
+            ) : null}
             {roleCosts.map((item) => (
               <div key={item.label}>
                 <div className="flex justify-between gap-3 text-sm font-black">
@@ -333,6 +427,11 @@ export default function MaoDeObraPage() {
             <h2 className="text-xl font-black text-foundation">Histórico recente</h2>
           </div>
           <div className="mt-4 grid gap-2">
+            {!recentHistory.length ? (
+              <p className="text-sm font-semibold text-graphite/60">
+                Nenhum pagamento confirmado recentemente.
+              </p>
+            ) : null}
             {recentHistory.map((item) => (
               <div key={`${item.date}-${item.name}`} className="grid gap-3 rounded-[8px] bg-concrete p-3 sm:grid-cols-[90px_1fr_auto] sm:items-center">
                 <p className="text-xs font-black uppercase text-build">{item.date}</p>
