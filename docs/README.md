@@ -59,6 +59,7 @@ Skills do projeto em `.cursor/skills/`:
 | Área | Status |
 |------|--------|
 | UI + nav enxuto | Implementado |
+| Onboarding perfil (`/onboarding`) | Implementado |
 | Supabase Auth + DB + RLS | Integrado (migrations 001–009) |
 | CRUD núcleo + formulários de captura | Integrado |
 | Hotmart webhook + signup | Código pronto; secrets produção pendentes |
@@ -67,4 +68,4 @@ Skills do projeto em `.cursor/skills/`:
 | CI | `.github/workflows/ci.yml` |
 | Deploy Cloudflare | `wrangler.jsonc` + `deploy.yml` → obrioai.app |
 
-Última atualização: simplificação UX, captura real, Hotmart-only, docs sincronizados.
+Última atualização: onboarding perfil, clima Open-Meteo, troubleshooting dev, migration 009.

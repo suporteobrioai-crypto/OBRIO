@@ -20,6 +20,7 @@ MVP de gestão de obras e reformas com assistente inteligente — mercado brasil
 | Supabase (Auth, DB, hooks, CRUD núcleo) | Integrado |
 | Captura (diário, compras, pagamentos, lembretes) | Formulários + hooks |
 | Nav enxuto (7 itens) + `/responsaveis` | Implementado |
+| Onboarding perfil pós-login (`/onboarding`) | Implementado |
 | Relatórios | Dados reais da obra ativa + export `.txt` |
 | Clima | Open-Meteo via `/api/weather` no dashboard |
 | Hotmart + Resend (cadastro pós-compra) | Código pronto; migration `009` + secrets |

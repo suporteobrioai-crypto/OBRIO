@@ -164,7 +164,8 @@ Via `public/_headers` (Cloudflare assets):
 
 ### Supabase
 
-- [ ] Migrations 001–008 aplicadas no projeto `kvofxprsmzyxssjpyfmy`
+- [ ] Migrations `001`–`009` aplicadas (`npx supabase db push --linked`)
+- [ ] Tabela `signup_invites` existe (migration `009`) antes de ativar Hotmart/Resend
 - [ ] RLS habilitado em todas as tabelas
 - [ ] Auth URL Configuration (Site URL + Redirect URLs acima)
 - [ ] Bucket `avatars` com policies de upload
@@ -178,12 +179,6 @@ Via `public/_headers` (Cloudflare assets):
 - [ ] SSL Full (strict) + HTTPS redirect
 - [ ] HSTS via dashboard (opcional)
 
-### Supabase
-
-- [ ] Migrations `001`–`009` aplicadas (`npx supabase db push --linked`)
-- [ ] Tabela `signup_invites` existe (migration `009`) antes de ativar Hotmart/Resend
-- [ ] RLS policies ativas nas tabelas core
-
 ### GitHub
 
 - [ ] Secrets configurados (Supabase, Cloudflare, E2E)
@@ -193,7 +188,7 @@ Via `public/_headers` (Cloudflare assets):
 ### Smoke test pós-deploy
 
 - [ ] `https://obrioai.app/` — formulário de login visível
-- [ ] Login → redirect `/dashboard`
+- [ ] Login → redirect `/onboarding` (perfil incompleto) ou `/dashboard`
 - [ ] Logo/favicon sem 404 (Network tab)
 - [ ] Criar/listar obra no AppShell
 - [ ] Logout → volta para `/`

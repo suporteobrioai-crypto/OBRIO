@@ -39,6 +39,15 @@ Definidos em `tailwind.config.ts`:
 ## Componentes (`components/Ui.tsx`)
 
 - `Card`, `Metric`, `Field`, `SelectField`, `PrimaryButton`, `SmartCaptureBox`
+- `PrimaryButton` — aceita props nativas de `<button>` (`type`, `disabled`, `onClick`, `className`)
+
+## Componentes de domínio
+
+| Componente | Arquivo | Uso |
+|------------|---------|-----|
+| `CreateRecordPanel` | `components/CreateRecordPanel.tsx` | Formulário reutilizável de criação (diário, compras, pagamentos, lembretes) |
+| `ObraWeatherCard` | `components/ObraWeatherCard.tsx` | Previsão Open-Meteo no dashboard (cidade da obra ativa) |
+| `PreviewBanner` | `components/PreviewBanner.tsx` | Banner de ambiente preview/staging |
 
 ## Componentes de marca
 

@@ -136,12 +136,23 @@ Ver [TESTING.md](./TESTING.md).
 
 | Problema | Solução |
 |----------|---------|
-| Porta 3000 em uso | `npm run dev -- -p 3001` |
+| Porta 3000 em uso | `npm run dev -- -p 3001` — **pare o outro `npm run dev` antes** |
+| Tela sem estilo / 404 em `/_next/static` | Parar **todos** os `npm run dev`, apagar `.next` e `tsconfig.tsbuildinfo`, subir **um** `npm run dev`, hard refresh (`Ctrl+Shift+R`) |
+| 500 Internal Server Error | Mesma causa do item acima (cache `.next` corrompido) |
 | Supabase não conecta | Verificar `.env.local` e restart |
-| Build falha | `npm run lint` + corrigir TS |
+| Build falha | `npm run lint` + corrigir TS — rode `npm run build` com o dev **parado** |
 | E2E skipped | Definir `E2E_USER_EMAIL` e `E2E_USER_PASSWORD` |
 | Webhook 401 | `HOTMART_HOTTOK` no header `X-Hotmart-Hottok` |
 | Resend 403 | Usar `onboarding@resend.dev` em dev |
+
+### Um servidor dev por vez
+
+Dois `next dev` (ex.: portas 3000 e 3001) no **mesmo** projeto compartilham a pasta `.next` e corrompem o cache webpack.
+
+- Desenvolvimento: `npm run dev` em **http://localhost:3000**
+- E2E local: pare o dev antes de `npm run test:e2e` (Playwright sobe `npm run start` na 3001) ou use `PLAYWRIGHT_BASE_URL` apontando para um único servidor já rodando
+
+Ver também [TESTING.md](./TESTING.md).
 
 ## Referências
 

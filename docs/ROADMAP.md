@@ -17,7 +17,9 @@ Roadmap de evolução do MVP para produto em produção.
 | Diário, materiais, pagamentos (hooks + páginas) | Concluído |
 | Perfil + limites de plano (`subscriptions`) | Concluído |
 | `/financeiro` agregando compras + pagamentos | Concluído |
-| Migrations 001–008 | Concluído (aplicadas no remoto) |
+| Migrations 001–009 | Concluído (009 = `signup_invites`; verificar remoto) |
+| Onboarding perfil (`/onboarding`) | Concluído |
+| Clima Open-Meteo (`ObraWeatherCard`) | Concluído |
 | Unit tests (Vitest mappers) | Concluído |
 | CI (lint, test, build) | Concluído |
 | E2E Playwright (auth flow) | Concluído |
@@ -30,7 +32,8 @@ Roadmap de evolução do MVP para produto em produção.
 
 ### O que funciona hoje
 
-- Login em `/` (alias `/login`); redirect autenticado → `/dashboard`
+- Login em `/` (alias `/login`); redirect autenticado → `/onboarding` (perfil incompleto) ou `/dashboard`
+- Wizard de perfil pós-login (`/onboarding`: nome, WhatsApp, foto opcional)
 - Navegação completa entre módulos principais
 - Layout responsivo mobile-first
 - Auth real (login, cadastro OTP, signout POST, middleware)
@@ -40,6 +43,7 @@ Roadmap de evolução do MVP para produto em produção.
 - Nav enxuto (7 itens); `/responsaveis` substitui `/trocar-obra`
 - Dock IA e FAB WhatsApp ocultos por padrão (feature flags)
 - `/api/ai/chat`, `/api/weather`, `/api/export/report`
+- Clima real no dashboard via `ObraWeatherCard` + Open-Meteo (`/api/weather`)
 - Perfil com dados reais e upload de avatar (bucket `avatars`)
 - Limites de plano via tabela `subscriptions` no AppShell
 - Dashboard agregando obra ativa + lembretes + diário + financeiro
@@ -93,7 +97,8 @@ Roadmap de evolução do MVP para produto em produção.
 | `lib/supabase/client.ts` + `server.ts` | Concluído |
 | `middleware.ts` | Concluído |
 | Login/cadastro | Concluído |
-| Migrations 002–008 | Concluído |
+| Migrations 002–009 | Concluído |
+| Onboarding perfil (`/onboarding`) | Concluído |
 | CRUD obras | Concluído |
 | Hook `useObraAtiva` | Concluído |
 
@@ -119,18 +124,18 @@ Roadmap de evolução do MVP para produto em produção.
 
 ---
 
-### F3 — IA e integrações (pendente)
+### F3 — IA e integrações (parcial)
 
 **Objetivo:** Diferenciais do produto.
 
-| Integração | Abordagem |
-|------------|-----------|
-| Assistente IA | `POST /api/ai/chat` + LLM |
-| SmartCapture | OCR/extração de NF via IA |
-| WhatsApp | Business API ou provedor |
-| Clima | OpenWeather ou similar |
-| Export | PDF + Excel |
-| Recibos | Geração PDF server-side |
+| Integração | Abordagem | Status |
+|------------|-----------|--------|
+| Assistente IA | `POST /api/ai/chat` + LLM | Stub sem `OPENAI_API_KEY`; dock oculto por flag |
+| SmartCapture | OCR/extração de NF via IA | Pendente |
+| WhatsApp | Business API ou provedor | Pendente (FAB oculto por flag) |
+| Clima | Open-Meteo via `/api/weather` | Concluído no dashboard |
+| Export | `.txt` via `/api/export/report` | Concluído; Excel pendente |
+| Recibos | Geração PDF server-side | Pendente |
 
 **Critério de saída:** Enviar mensagem no dock IA e receber resposta; lembrete via WhatsApp em staging.
 
@@ -157,11 +162,11 @@ Roadmap de evolução do MVP para produto em produção.
 
 ## Priorização sugerida (próximos 30 dias)
 
-1. Hotmart billing: sync `subscriptions` após signup
-2. Assistente IA (route handler + dock)
+1. Hotmart billing: sync `subscriptions` após signup + ativar `NEXT_PUBLIC_SIGNUP_ENABLED`
+2. Assistente IA com persistência parseada (dock via flag)
 3. E2E expandido (obra + lembrete)
 4. LGPD mínima (política + delete account)
-5. Clima API real no dashboard
+5. Export Excel em relatórios
 
 ## Referências
 

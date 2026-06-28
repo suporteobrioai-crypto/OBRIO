@@ -15,6 +15,8 @@ Personas: dono da obra, responsável técnico, colaborador convidado.
 
 | Módulo | Rota | Persistência |
 |--------|------|--------------|
+| Auth / Login | `/` | Supabase Auth |
+| Onboarding perfil | `/onboarding` | `profiles` (nome, WhatsApp, avatar) |
 | Dashboard | `/dashboard` | Hooks agregados + clima (`/api/weather`) |
 | Obras | `/obras`, `/obras/nova` | Supabase |
 | Diário | `/diario` | `createEntry` |
@@ -29,6 +31,15 @@ Personas: dono da obra, responsável técnico, colaborador convidado.
 Redirects legados: `/trocar-obra` → `/responsaveis`, `/equipe` → `/responsaveis`, `/clima`/`/recibos`/`/assistente` → `/dashboard`, `/login` → `/`.
 
 Detalhe completo: `docs/ROUTES.md`
+
+## Fluxo pós-login
+
+1. Login em `/` → middleware verifica `profiles.full_name` + `profiles.whatsapp`
+2. Perfil incompleto → `/onboarding` (wizard 3 passos)
+3. Perfil completo → `/dashboard`
+4. Cadastro de obra em `/obras/nova` é **opcional** (não bloqueia acesso ao app)
+
+Lógica: `lib/auth/profile-onboarding.ts`, `lib/auth/post-login-path.ts`, `lib/supabase/middleware.ts`
 
 ## Obra ativa (contexto global)
 
