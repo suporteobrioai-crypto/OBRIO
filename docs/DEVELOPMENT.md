@@ -21,7 +21,27 @@ npm run dev
 
 App em **http://localhost:3000** — a raiz (`/`) é o login.
 
-Migrations já aplicadas no remoto. Para ambiente novo:
+### Fase atual: login de teste
+
+Por enquanto o foco é **entrar no app** com um usuário de teste. O cadastro pós-compra (Hotmart) fica desligado até a configuração final do Supabase.
+
+**Mínimo no `.env.local`:**
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://kvofxprsmzyxssjpyfmy.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon
+NEXT_PUBLIC_SIGNUP_ENABLED=false
+```
+
+**Login:** abra `/`, informe email e senha de um usuário já criado no Supabase Auth (Authentication → Users).
+
+**E2E / CI:** opcionalmente defina `E2E_USER_EMAIL` e `E2E_USER_PASSWORD` com o mesmo usuário de teste.
+
+**Depois (fase Supabase):** migration `009_signup_invites`, webhook Hotmart, Resend, `NEXT_PUBLIC_SIGNUP_ENABLED=true`.
+
+Migrations já aplicadas no remoto (001–008). A `009` fica para a fase pós-compra.
+
+Para ambiente Supabase novo (fase final):
 
 ```bash
 supabase db push --linked -p "SUA_SENHA_DB" --yes
@@ -52,8 +72,9 @@ Arquivo: `.env.local` (nunca commitar)
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Alternativa ao ANON_KEY | Sim* |
 | `NEXT_PUBLIC_SITE_URL` | URLs absolutas (prod) | Deploy |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server/admin only | Não no client |
-| `E2E_USER_EMAIL` | Playwright | E2E only |
-| `E2E_USER_PASSWORD` | Playwright | E2E only |
+| `E2E_USER_EMAIL` | Playwright / login de teste | E2E only |
+| `E2E_USER_PASSWORD` | Playwright / login de teste | E2E only |
+| `NEXT_PUBLIC_SIGNUP_ENABLED` | Exibe aba Criar conta | Não (default `false`) |
 
 \* Uma das duas chaves publishable/anon.
 

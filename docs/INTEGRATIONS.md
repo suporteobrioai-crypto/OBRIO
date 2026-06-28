@@ -8,12 +8,16 @@ Integrações externas: estado atual, arquitetura e pontos de entrada no código
 flowchart LR
   App["Next.js App"]
   Supa["Supabase"]
+  HM["Hotmart"]
+  Resend["Resend"]
   AI["LLM API"]
   WA["WhatsApp"]
   Weather["Clima API"]
   Stripe["Stripe"]
 
+  HM --> App
   App --> Supa
+  App --> Resend
   App -.-> AI
   App -.-> WA
   App -.-> Weather
@@ -23,6 +27,8 @@ flowchart LR
 | Integração | Estado | Prioridade |
 |------------|--------|------------|
 | Supabase Auth + DB | **Integrado** | P0 ✅ |
+| Hotmart (pós-compra) | **Integrado** | P0 ✅ |
+| Resend (email boas-vindas) | **Integrado** | P0 ✅ |
 | Supabase Storage | **Integrado** (avatars, diário) | P1 ✅ |
 | Assistente IA | Dock UI only | P1 |
 | WhatsApp | FAB → config, copy only | P2 |
@@ -35,16 +41,17 @@ flowchart LR
 
 ### Auth
 
-**Implementado:** `app/page.tsx` (login), `app/login/page.tsx`, `app/cadastro/page.tsx`, `middleware.ts`, `app/auth/signout/route.ts`
+**Implementado:** `components/auth/AuthScreen.tsx` em `/` e `/login`, redirect `/cadastro`, `middleware.ts`, `app/auth/signout/route.ts`
 
-| Fluxo cadastro | Implementação |
-|----------------|---------------|
-| Email | `signInWithOtp` |
-| Código | `verifyOtp` |
-| Senha | `updateUser({ password })` |
-| Perfil | Upsert em `profiles` |
+| Fluxo pós-compra | Implementação |
+|------------------|---------------|
+| Compra Hotmart | `POST /api/webhooks/hotmart` |
+| Email boas-vindas | Resend → link `/?mode=cadastro&email&token` |
+| Cadastro | `POST /api/auth/signup` (email + senha + WhatsApp, sem OTP) |
+| Pós-cadastro | Aba Entrar na mesma tela (sem auto-login) |
+| Login | `signInWithPassword` → onboarding via `post-login-path` |
 
-Login: `signInWithPassword` → redirect `/dashboard`.
+Login: `signInWithPassword` → `/obras/nova` ou `/dashboard`.
 
 Logout: POST `/auth/signout` → redirect `/`.
 
@@ -130,6 +137,41 @@ Lembretes diários, alertas clima, OTP alternativo via WhatsApp Business API.
 - API: OpenWeatherMap ou INMET
 - Cache por cidade da obra
 - Route Handler: `app/api/weather/route.ts`
+
+---
+
+## Hotmart + Resend ✅
+
+### Fluxo pós-compra
+
+```
+Hotmart PURCHASE_COMPLETE → POST /api/webhooks/hotmart
+  → signup_invites + token
+  → Resend (purchase-welcome)
+  → link https://obrioai.app/?mode=cadastro&email&token
+Usuário cadastra → POST /api/auth/signup → aba Entrar → login
+```
+
+### Arquivos
+
+| Arquivo | Função |
+|---------|--------|
+| `app/api/webhooks/hotmart/route.ts` | Webhook |
+| `app/api/auth/signup/route.ts` | Cadastro server-side |
+| `lib/hotmart/parse-event.ts` | Parser payload |
+| `lib/email/send-purchase-welcome.ts` | Envio Resend |
+| `scripts/create-test-invite.ts` | Invite manual para testes |
+
+### Configuração Hotmart
+
+1. Ferramentas → Webhook → URL `https://obrioai.app/api/webhooks/hotmart`
+2. Eventos: Compra aprovada, Compra completa
+3. Copiar Hottok → secret `HOTMART_HOTTOK`
+
+### Configuração Resend
+
+1. Verificar domínio `obrioai.app` (SPF/DKIM)
+2. `RESEND_API_KEY` + `EMAIL_FROM`
 
 ---
 

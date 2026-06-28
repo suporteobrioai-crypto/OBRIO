@@ -6,9 +6,9 @@ Práticas de segurança para auth, dados, secrets e conformidade LGPD.
 
 | Controle | Status |
 |----------|--------|
-| Autenticação | **Implementado** — Supabase Auth (email + senha, OTP cadastro) |
+| Autenticação | **Implementado** — Supabase Auth (email + senha; cadastro pós-compra via API) |
 | Proteção de rotas | **Implementado** — `middleware.ts` refresh + redirect |
-| RLS Supabase | **Implementado** — migrations 001–008 |
+| RLS Supabase | **Implementado** — migrations 001–009 |
 | Logout | **Implementado** — POST `/auth/signout`, cookies limpos |
 | HTTPS | Cloudflare (obrioai.app) |
 | Headers | `public/_headers` (X-Frame-Options, nosniff, etc.) |
@@ -19,7 +19,7 @@ Rotas públicas: `/`, `/login`, `/cadastro`.
 
 Rotas protegidas: todas as demais → redirect para `/` se sem sessão.
 
-Usuário autenticado em `/`, `/login` ou `/cadastro` → redirect `/dashboard`.
+Usuário autenticado em `/`, `/login` ou `/cadastro` → onboarding (`/obras/nova` ou `/dashboard`).
 
 ---
 
@@ -28,8 +28,9 @@ Usuário autenticado em `/`, `/login` ou `/cadastro` → redirect `/dashboard`.
 ### Supabase Auth
 
 - Email + senha no login
-- OTP no cadastro (email → código → senha → perfil)
+- Cadastro pós-compra: `POST /api/auth/signup` com token Hotmart (sem OTP)
 - Session em cookies httpOnly via `@supabase/ssr`
+- `SUPABASE_SECRET_KEY` apenas em route handlers (signup, webhook)
 
 ### Middleware
 
@@ -37,7 +38,7 @@ Implementado em `middleware.ts` + `lib/supabase/middleware.ts`:
 
 - Refresh de session a cada request
 - Redirect não autenticado → `/`
-- Redirect autenticado em rotas auth → `/dashboard`
+- Redirect autenticado em rotas auth → onboarding via `post-login-path`
 
 ### Logout
 

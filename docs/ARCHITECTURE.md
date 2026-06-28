@@ -39,7 +39,7 @@ obrio-ai/
 ├── e2e/                    # Playwright specs
 ├── supabase/
 │   ├── config.toml
-│   └── migrations/         # 001–008
+│   └── migrations/         # 001–009
 ├── public/
 │   ├── favicon.svg
 │   └── _headers            # Security + cache (Cloudflare)
@@ -54,9 +54,9 @@ obrio-ai/
 
 ### Páginas standalone (sem AppShell)
 
-- `/` — login (mesmo formulário de `/login`)
-- `/login` — alias do login
-- `/cadastro` — wizard OTP + senha
+- `/` — auth unificado (Entrar + Criar conta)
+- `/login` — alias do auth unificado
+- `/cadastro` — redirect para `/?mode=cadastro`
 - `/obras/nova` — wizard fullscreen
 
 ### Páginas com AppShell

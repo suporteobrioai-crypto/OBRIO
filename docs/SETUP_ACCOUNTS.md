@@ -103,12 +103,18 @@ Em https://github.com/suporteobrioai-crypto/OBRIO/settings/secrets/actions:
 npm run dev
 ```
 
-1. `/cadastro` → email → OTP → senha → WhatsApp
-2. `/login` → entrar
+1. Com link de teste: `npx tsx scripts/create-test-invite.ts voce@email.com`
+2. Abrir link → cadastro (email + senha + WhatsApp) → aba Entrar → login
 3. `/obras/nova` → criar obra → ver em `/obras`
 
-## 5. Teste produção
+## 5. Hotmart + Resend (produção)
 
-1. https://obrioai.app — home carrega com SSL
-2. https://obrioai.app/login — auth funciona
-3. https://obrioai.app/cadastro — callback retorna para obrioai.app
+1. Aplicar migration `009_signup_invites.sql` no Supabase
+2. Configurar secrets: `HOTMART_HOTTOK`, `SIGNUP_TOKEN_SECRET`, `RESEND_API_KEY`, `SUPABASE_SECRET_KEY`
+3. Hotmart → Webhook → `https://obrioai.app/api/webhooks/hotmart`
+4. Resend → verificar domínio `obrioai.app`
+
+## 6. Teste produção
+
+1. https://obrioai.app — auth unificado (abas Entrar / Criar conta)
+2. Compra teste Hotmart → email → cadastro → login → onboarding

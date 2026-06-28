@@ -14,9 +14,9 @@ Referência completa das rotas do App Router (`app/`).
 
 | Rota | Arquivo | AppShell | Nav | Status | Descrição |
 |------|---------|----------|-----|--------|-----------|
-| `/` | `app/page.tsx` | Não | — | Integrado | Login; autenticado → `/obras/nova` (sem obras) ou `/dashboard` |
-| `/login` | `app/login/page.tsx` | Não | — | Integrado | Alias do login; mesmo redirect pós-auth |
-| `/cadastro` | `app/cadastro/page.tsx` | Não | — | Integrado | Wizard OTP + senha + perfil (Supabase) |
+| `/` | `app/page.tsx` | Não | — | Integrado | Auth unificado (Entrar + Criar conta); autenticado → onboarding |
+| `/login` | `app/login/page.tsx` | Não | — | Integrado | Alias do auth unificado |
+| `/cadastro` | `app/cadastro/page.tsx` | Não | — | Redirect | Redireciona para `/?mode=cadastro` |
 | `/dashboard` | `app/dashboard/page.tsx` | Sim | Sim | Integrado | Hub: métricas, lembretes, diário, financeiro |
 | `/obras` | `app/obras/page.tsx` | Sim | Sim | Integrado | Lista obras do Supabase |
 | `/obras/nova` | `app/obras/nova/page.tsx` | Não | — | Integrado | Wizard 11 passos → insert `obras` |
@@ -90,7 +90,15 @@ Link destino: `/configuracoes`
 
 ## Páginas standalone
 
-- `/`, `/login`, `/cadastro`, `/obras/nova`
+- `/`, `/login`, `/cadastro` (redirect), `/obras/nova`
+
+## API routes (auth / vendas)
+
+| Rota | Método | Descrição |
+|------|--------|-----------|
+| `/api/auth/signup` | POST | Cadastro pós-compra (token Hotmart) |
+| `/api/auth/validate-invite` | GET | Valida link de cadastro |
+| `/api/webhooks/hotmart` | POST | Webhook compra aprovada Hotmart |
 
 ## Redirect pós-login
 

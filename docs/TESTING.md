@@ -6,8 +6,8 @@ Estratégia de testes: unit, E2E e CI.
 
 | Tipo | Status |
 |------|--------|
-| Unit tests | Vitest — `lib/__tests__/obras.test.ts`, `lib/__tests__/lembretes.test.ts` |
-| E2E | Playwright — `e2e/auth-flow.spec.ts` |
+| Unit tests | Vitest — `lib/__tests__/`, `lib/auth/signup-flow.test.ts` |
+| E2E | Playwright — `e2e/auth-flow.spec.ts`, `e2e/auth-screen.spec.ts` |
 | CI test gate | `.github/workflows/ci.yml` |
 | Deploy gate | lint + test + build em `deploy.yml` |
 
@@ -41,12 +41,20 @@ Adicionar testes co-localizados ou em `lib/__tests__/` para novos utils.
 - `playwright.config.ts` — baseURL de `PLAYWRIGHT_BASE_URL` (default `http://127.0.0.1:3001`)
 - `webServer`: `npm run start -p 3001` (evita conflito com dev na 3000)
 
+### Spec: auth screen
+
+`e2e/auth-screen.spec.ts`:
+
+1. Abas Entrar / Criar conta visíveis em `/`
+2. `/?mode=cadastro` abre formulário de cadastro
+3. `/cadastro` redireciona para auth unificado
+
 ### Spec: auth flow
 
 `e2e/auth-flow.spec.ts`:
 
 1. Visit `/` → formulário de login visível
-2. Login com credenciais E2E → redirect `/dashboard`
+2. Login com credenciais E2E → redirect `/dashboard` ou `/obras/nova`
 3. Logout via menu AppShell → volta ao login em `/`
 
 ### Credenciais E2E

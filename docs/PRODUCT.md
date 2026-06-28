@@ -22,8 +22,8 @@ Donos de obras, reformas e pequenos empreiteiros gerenciam informações crític
 
 | Módulo | Rota | Descrição |
 |--------|------|-----------|
-| Landing | `/` | Marketing, CTAs para cadastro e login |
-| Autenticação | `/login`, `/cadastro` | Entrada e onboarding de conta |
+| Landing / Auth | `/`, `/login` | Login + cadastro na mesma tela |
+| Cadastro (redirect) | `/cadastro` | Redireciona para `/?mode=cadastro` |
 | Dashboard | `/dashboard` | Hub: resumo do dia, métricas, clima, timeline |
 | Obras | `/obras`, `/obras/nova` | Lista, filtros, wizard de nova obra |
 | Diário da obra | `/diario` | Linha do tempo com anexos e filtros |
@@ -45,19 +45,16 @@ Donos de obras, reformas e pequenos empreiteiros gerenciam informações crític
 
 ```mermaid
 flowchart LR
-  Landing["Landing /"] --> Cadastro["Cadastro"]
-  Cadastro --> NovaObra["Nova obra /obras/nova"]
+  Vendas["Página vendas Hotmart"] --> Email["Email boas-vindas"]
+  Email --> Cadastro["Cadastro /?mode=cadastro"]
+  Cadastro --> Login["Aba Entrar mesma tela"]
+  Login --> NovaObra["Nova obra /obras/nova"]
   NovaObra --> Dashboard["Dashboard"]
   Dashboard --> Operacao["Operação diária"]
-  Operacao --> Diario["Diário"]
-  Operacao --> Materiais["Materiais"]
-  Operacao --> MaoDeObra["Mão de obra"]
-  Operacao --> Lembretes["Lembretes"]
-  Dashboard --> Relatorios["Relatórios"]
 ```
 
 ### 1. Aquisição
-Landing → Cadastro (5 passos: email, código, senha, WhatsApp, sucesso) → Dashboard ou Nova obra.
+Compra Hotmart → email com link → cadastro (email + senha + WhatsApp) → login → onboarding (`/obras/nova` ou `/dashboard`).
 
 ### 2. Onboarding de obra
 Wizard de 11 passos em `/obras/nova`: nome, tipo, localização, orçamento, metas, datas, etc. Modo manual ou IA (UI parcial).

@@ -52,7 +52,12 @@ Configure no **Cloudflare Dashboard** → Workers → obrio-ai → Settings → 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` ou `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Build + runtime |
 | `NEXT_PUBLIC_SITE_URL` | `https://obrioai.app` (também em `wrangler.jsonc` vars) |
 | `CLOUDFLARE_API_TOKEN` | CI deploy only |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only (se route handlers precisarem) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only (signup API, webhook Hotmart) |
+| `HOTMART_HOTTOK` | Webhook Hotmart |
+| `SIGNUP_TOKEN_SECRET` | Tokens de convite de cadastro |
+| `RESEND_API_KEY` | Email pós-compra |
+| `EMAIL_FROM` | Remetente Resend |
+| `NEXT_PUBLIC_SALES_PAGE_URL` | Link página de vendas na UI |
 
 O `wrangler.jsonc` contém apenas `NEXT_PUBLIC_SITE_URL` em `vars` — chaves Supabase ficam em secrets.
 

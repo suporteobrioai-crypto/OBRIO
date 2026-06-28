@@ -24,6 +24,7 @@
     { "pattern": "www.obrioai.app", "custom_domain": true }
   ],
   "vars": {
-    "NEXT_PUBLIC_SITE_URL": "https://obrioai.app"
+    "NEXT_PUBLIC_SITE_URL": "https://obrioai.app",
+    "NEXT_PUBLIC_SIGNUP_ENABLED": "false"
   }
 }
