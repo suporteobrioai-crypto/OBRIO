@@ -15,8 +15,6 @@ export const PROTECTED_PREFIXES = [
   "/assistente",
   "/equipe",
   "/responsaveis",
-  "/trocar-obra",
-  "/responsaveis",
   "/perfil",
   "/configuracoes",
   "/assinatura"
